@@ -11,10 +11,9 @@ keys = [
     ['15', '16', '17', '18', '19'],
     ['20', '21', '22', '23', '24']
 ]
-
-
-
-
-
 LED_column_pins = [Pin(1),Pin(2),Pin(42),Pin(41),Pin(40)]
 LED_row_pins = [Pin(39),Pin(38),Pin(37),Pin(36),Pin(35)]
+
+
+
+TARGET_TIMEOUT_MS = 10000  # milliseconds

@@ -21,14 +21,9 @@ from led import LedManager
 print("diocan", utime.time_ns())
 
 
-####
-
-
 print("cols:", str([i.value() for i in column_pins]))
 print("rows:", str([i.value() for i in row_pins]))
 KeyPad = KeyPad(row_pins, column_pins, keys)
-
-
 LedManager = LedManager(LED_row_pins, LED_column_pins, keys)
 
 
@@ -46,12 +41,13 @@ class GameManager:
         self.LedManager = LedManager
         self.startTime = utime.time_ns()
         self.gameActive = False
+        self.buttonTimeout = TARGET_TIMEOUT_MS
 
 
 
     def randomizer(self):
-        x = [str(i) for i in range(0,5)]
-        shuffle(x) # type: ignore
+        x = [str(i) for i in range(0,25)]
+        shuffle(x)
         return x
 
     def start(self):
@@ -77,26 +73,33 @@ class GameManager:
             return
 
         endTime = utime.time_ns()
-        elapsedTime = (endTime - self.startTime) / 1_000_000
+        elapsedTime = (endTime - self.startTime) / 1_000_000_000
         print("Game Over! Time:", elapsedTime, "ms")
 
         self.gameActive = False
 
 
     def gameLoop(self):
+        buttonTimeoutStart = utime.ticks_ms()
         while self.gameActive:
             print("Waiting for key:", self.sequence[0])
-            key_pressed = self.keypad.read_keypad()
 
+            if utime.ticks_diff(utime.ticks_ms(), buttonTimeoutStart) > self.buttonTimeout:
+                print("Timeout! No key pressed in time.")
+                self.LedManager.ledOFF(self.sequence[0])
+                self.sequence.pop(0)
+                buttonTimeoutStart = utime.ticks_ms()
+                utime.sleep_ms(100)
+
+            key_pressed = self.keypad.read_keypad()
             self.LedManager.ledON(self.sequence[0])
 
             if key_pressed is not None and key_pressed == self.sequence[0]:
                 print("Correct key pressed:", key_pressed)
 
+                self.LedManager.ledOFF(self.sequence[0])
                 self.sequence.pop(0)
-                # print("KEY", key_pressed)
-                # await self.LedManager.display_led(key_pressed)
-                self.LedManager.ledOFF(key_pressed)
+                buttonTimeoutStart = utime.ticks_ms()
                 utime.sleep_ms(100)
             utime.sleep_ms(10)
 
@@ -115,38 +118,5 @@ gameManager = GameManager(KeyPad, LedManager)
 
 
 gameManager.start()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# while True:
-#     key_pressed = KeyPad.read_keypad()
-#     if key_pressed:
-#         # print("cols:", str([i.value() for i in column_pins]))
-#         # print("rows:", str([i.value() for i in row_pins]))
-
-#         print("KEY",key_pressed)
-#         # LedManager.display_led(key_pressed)
-#         asyncio.run(LedManager.display_led(key_pressed))
-
-#     utime.sleep_ms(100)
-
-
-
-
 
 
