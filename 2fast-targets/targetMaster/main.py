@@ -56,10 +56,16 @@ class GameManager:
 
     def start(self):
         self.gameActive = True
-        self.startTime = utime.time_ns()
         self.sequence = self.randomizer()
         print("Game Started! Sequence:", self.sequence)
 
+        self.LedManager.trafficLight()
+
+
+        self.LedManager.clear()
+
+
+        self.startTime = utime.time_ns()
         self.gameLoop()
 
 

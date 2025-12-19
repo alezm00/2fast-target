@@ -1,7 +1,7 @@
 from machine import Pin
 from utime import sleep_ms
 import asyncio
-
+import random
 
 class LedException(Exception):
     """
@@ -65,6 +65,26 @@ class LedManager:
                 c.value(0)
             i.value(0)
             await asyncio.sleep(delay_ms / 1000.0)
+
+    def allToggle(self, state):
+        for r in self.row_pins:
+            r.value(state)
+        for c in self.column_pins:
+            c.value(state)
+
+
+    def trafficLight(self):
+        for c in self.column_pins:
+            c.value(1)
+
+        for i, r in enumerate(self.row_pins):
+            r.value(1)
+            sleep_ms(800)
+            if i == len(self.row_pins) - 1:
+                sleep_ms(500 + (random.randint(0,500)))
+                r.value(1)
+                break
+
 
 
     def clear(self):
