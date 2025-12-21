@@ -5,20 +5,15 @@ from random import randrange
 
 
 
-
 from config import *
 from keypad import KeyPad
 from led import LedManager
-#### CONFIG
-
-
-
-# for i in LED_column_pins:
-#     i.init(Pin.OUT)
-# for i in LED_row_pins:
-#     i.init(Pin.OUT)
+from log import NeoLogger
 
 print("diocan", utime.time_ns())
+NeoLogger = NeoLogger()
+
+NeoLogger.blink(3, "green")
 
 
 print("cols:", str([i.value() for i in column_pins]))
@@ -29,11 +24,7 @@ LedManager = LedManager(LED_row_pins, LED_column_pins, keys)
 
 
 
-def shuffle(array):
-    "Fisher–Yates shuffle"
-    for i in range(len(array)-1, 0, -1):
-        j = randrange(i+1)
-        array[i], array[j] = array[j], array[i]
+
 
 class GameManager:
     def __init__(self,keypad, LedManager):
@@ -43,11 +34,14 @@ class GameManager:
         self.gameActive = False
         self.buttonTimeout = TARGET_TIMEOUT_MS
 
-
+    def shuffle(self, array):
+        for i in range(len(array)-1, 0, -1):
+            j = randrange(i+1)
+            array[i], array[j] = array[j], array[i]
 
     def randomizer(self):
         x = [str(i) for i in range(0,25)]
-        shuffle(x)
+        self.shuffle(x)
         return x
 
     def start(self):
@@ -85,6 +79,8 @@ class GameManager:
             print("Waiting for key:", self.sequence[0])
 
             if utime.ticks_diff(utime.ticks_ms(), buttonTimeoutStart) > self.buttonTimeout:
+                if len(self.sequence) == 0:
+                    self.stop()
                 print("Timeout! No key pressed in time.")
                 self.LedManager.ledOFF(self.sequence[0])
                 self.sequence.pop(0)

@@ -1,8 +1,5 @@
 from machine import Pin
-from time import sleep
 
-__version__ = '1.0.3'
-__author__ = 'Teeraphat Kullanankanjana'
 
 class KeypadException(Exception):
     """
