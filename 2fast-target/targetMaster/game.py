@@ -13,9 +13,10 @@ from log import NeoLogger
 
 
 class GameManager:
-    def __init__(self,keypad, LedManager):
+    def __init__(self,keypad, LedManager, RemoteController):
         self.keypad = keypad
         self.LedManager = LedManager
+        self.RemoteController = RemoteController
         self.startTime = utime.time_ns()
         self.gameActive = False
         self.buttonTimeout = TARGET_TIMEOUT_MS
@@ -30,7 +31,7 @@ class GameManager:
         self.shuffle(x)
         return x
 
-    def start(self):
+    async def start(self):
         self.gameActive = True
         self.sequence = self.randomizer()
         print("Game Started! Sequence:", self.sequence)
@@ -42,32 +43,36 @@ class GameManager:
 
 
         self.startTime = utime.time_ns()
-        self.gameLoop()
+        await self.gameLoop()
 
-    def stop(self):
+    async def stop(self):
         if not self.gameActive:
             return
 
-        endTime = utime.time_ns()
-        elapsedTime = (endTime - self.startTime) / 1_000_000_000
-        print("Game Over! Time:", elapsedTime, "ms")
-
         self.gameActive = False
+        endTime = utime.time_ns()
+        elapsedTime = (endTime - self.startTime) / 1_000_000
+        print("Game Over! Time:", elapsedTime, "ms")
+        await self.RemoteController.sendMessage(f"ENDGAME:{elapsedTime:.2f}")
 
 
-    def gameLoop(self):
+    async def gameLoop(self):
         buttonTimeoutStart = utime.ticks_ms()
-        while self.gameActive:
+        while self.gameActive and len(self.sequence) > 0:  # Check sequence length
             print("Waiting for key:", self.sequence[0])
 
             if utime.ticks_diff(utime.ticks_ms(), buttonTimeoutStart) > self.buttonTimeout:
-                if len(self.sequence) == 0:
-                    self.stop()
                 print("Timeout! No key pressed in time.")
                 self.LedManager.ledOFF(self.sequence[0])
                 self.sequence.pop(0)
                 buttonTimeoutStart = utime.ticks_ms()
-                utime.sleep_ms(100)
+
+                if len(self.sequence) == 0:
+                    await self.stop()
+                    break
+
+                await asyncio.sleep_ms(100)
+                continue
 
             key_pressed = self.keypad.read_keypad()
             self.LedManager.ledON(self.sequence[0])
@@ -78,16 +83,16 @@ class GameManager:
                 self.LedManager.ledOFF(self.sequence[0])
                 self.sequence.pop(0)
                 buttonTimeoutStart = utime.ticks_ms()
-                utime.sleep_ms(100)
-            utime.sleep_ms(10)
 
-            if len(self.sequence) == 0:
-                self.stop()
+                if len(self.sequence) == 0:
+                    await self.stop()
+                    break
 
+                await asyncio.sleep_ms(100)
 
+            await asyncio.sleep_ms(10)  # Changed from 1000 to 10ms for responsiveness
 
-
-    def reset(self):
+    async def reset(self):
         if not self.gameActive:
             return
 

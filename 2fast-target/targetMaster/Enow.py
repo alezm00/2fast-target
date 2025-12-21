@@ -45,7 +45,7 @@ class EspNowReemoteControler:
                 a = await self.E.asend(peer_mac, message, sync=True)
                 if a:
                     print(f"Sent message: {message}", a)
-                    asyncio.run(NeoLogger.blink(2, "green"))
+                    await NeoLogger.blink(2, "green")  # Changed from asyncio.run()
                     if callback:
                         callback()
                     return True
@@ -61,10 +61,11 @@ class EspNowReemoteControler:
         print("Starting message receiver...")
         while True:
             try:
+                print("message receiver...")
                 async for mac, msg in self.E:
                     print(f"Received from {mac.hex()}: {msg.decode()}")
                     if callback:
-                        exit = callback(msg.decode(), mac or None)
+                        exit = await callback(msg, mac or None)  # Changed to await
             except OSError as err:
                 print("Receive error:", err)
                 await asyncio.sleep(5)
