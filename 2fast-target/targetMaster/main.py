@@ -45,7 +45,7 @@ gameManager = GameManager(KeyPad, LedManager)
 #     await asyncio.gather(send_messages(e, peer), receive_messages(e), print_stats(e))
 
 try:
-    pass
+    print("Starting transceiver...")
     asyncio.run(ReemoteControler.messageReceiver(gameManager.start, gameManager.stop))
     # asyncio.run(main(ReemoteControler, peer_mac))
 except KeyboardInterrupt:

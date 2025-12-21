@@ -1,7 +1,7 @@
 from machine import Pin
 from neopixel import NeoPixel
 import asyncio
-
+import utime
 
 
 class NeoLogger:
@@ -46,7 +46,7 @@ class NeoLogger:
             self.off()
             await asyncio.sleep(speed)
 
-    def syncBlink(self, times, color="red",speed=0.5):
+    def syncBlink(self, times, color="red",speed=500):
         print("LOG: Blinking", times, "times in", color)
         for _ in range(times):
             if color=="red":
@@ -55,7 +55,7 @@ class NeoLogger:
                 self.green()
             elif color=="white":
                 self.white()
-            asyncio.sleep(speed)
+            utime.sleep_ms(speed)
             self.off()
-            asyncio.sleep(speed)
+            utime.sleep_ms(speed)
 
