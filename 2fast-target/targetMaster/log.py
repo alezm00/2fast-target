@@ -24,11 +24,17 @@ class NeoLogger:
     def white(self):
         self.log(255,255,255)
 
+    def purple(self):
+        self.log(128,0,128)
+
+    def blue(self):
+        self.log(0,0,255)
+
     def off(self):
         self.log(0,0,0)
 
-    async def _blink(self, times, color):
-        print("Blinking", times, "times in", color)
+    async def blink(self, times, color="red",speed=0.5):
+        print("LOG: Blinking", times, "times in", color)
         for _ in range(times):
             if color=="red":
                 self.red()
@@ -36,9 +42,20 @@ class NeoLogger:
                 self.green()
             elif color=="white":
                 self.white()
-            await asyncio.sleep(0.2)
+            await asyncio.sleep(speed)
             self.off()
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(speed)
 
-    def blink(self, times, color="red"):
-        asyncio.run(self._blink(times, color))
+    def syncBlink(self, times, color="red",speed=0.5):
+        print("LOG: Blinking", times, "times in", color)
+        for _ in range(times):
+            if color=="red":
+                self.red()
+            elif color=="green":
+                self.green()
+            elif color=="white":
+                self.white()
+            asyncio.sleep(speed)
+            self.off()
+            asyncio.sleep(speed)
+
