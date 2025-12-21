@@ -1,19 +1,94 @@
 
 from machine import Pin, SoftI2C
 from machine_i2c_lcd import I2cLcd
-from time import sleep
+import utime
+import asyncio
 
-# Define the LCD I2C address and dimensions
-I2C_ADDR = 0x27
-I2C_NUM_ROWS = 4
-I2C_NUM_COLS = 20
+
+from Enow import EspNowReemoteControler
+from config import *
+
+
+
+led_pin = Pin(2, Pin.OUT)
+
+def led_blink(pin, times=5, delay_ms=20):
+    for _ in range(times):
+        pin.on()
+        utime.sleep_ms(delay_ms)
+        pin.off()
+        utime.sleep_ms(delay_ms)
+
+
+
+
+
 
 # Initialize I2C and LCD objects
-i2c = SoftI2C(sda=Pin(21), scl=Pin(22), freq=400000)
+i2c = SoftI2C(sda=I2C_SDA_PIN, scl=I2C_SCL_PIN, freq=400000)
 lcd = I2cLcd(i2c, I2C_ADDR, I2C_NUM_ROWS, I2C_NUM_COLS)
 
+RemoteControler = EspNowReemoteControler(peer_mac)
+
+
+
+
+
+print("LCD test",utime.ticks_ms())
 lcd.putstr("2Fast Target\n\nWaiting for master\nconnection...")
-sleep(10)
+utime.sleep_ms(2000)
+
+connection_established = False
+def on_connection_established(msg, mac):
+    if msg == INIT_MESSAGE:
+        global connection_established
+        connection_established = True
+        print("Connection established callback triggered")
+        lcd.clear()
+        lcd.putstr("Master connected!\nReady to start.")
+        led_blink(led_pin, times=10, delay_ms=50)
+        return True
+
+asyncio.create_task(RemoteControler.messageReceiver(callback=on_connection_established))
+while not connection_established:
+    asyncio.run(RemoteControler.sendMessage(INIT_MESSAGE,retry=1))
+    utime.sleep_ms(1000)  # Wait before retrying
+    pass
+
+
+utime.sleep_ms(2000)
+
+
+
+lcd.clear()
+lcd.putstr("2Fast Target\n\nWaiting for\nbutton press...")
+print("Waiting for button press...",utime.ticks_ms())
+debounceDelay = 5000  # milliseconds
+buttonlastPress = utime.ticks_ms()-debounceDelay
+def button_handler(pin):
+    global buttonlastPress
+    if utime.ticks_diff(utime.ticks_ms(), buttonlastPress) < debounceDelay:
+        return
+    buttonlastPress = utime.ticks_ms()
+    print("Button pressed, sending START message")
+    lcd.putstr("Button pressed!\nSending START")
+    asyncio.run(RemoteControler.sendMessage(START_MESSAGE))
+
+
+
+
+
+try:
+    buttonPin.irq(trigger=Pin.IRQ_FALLING, handler=button_handler)
+except KeyboardInterrupt:
+    print("Keyboard interrupt")
+    lcd.backlight_off()
+    lcd.display_off()
+    RemoteControler.close()
+
+# asyncio.run(RemoteControler.sendMessage(START_MESSAGE))
+
+
 
 # try:
 #     while True:
