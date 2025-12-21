@@ -6,7 +6,7 @@ import time
 
 
 from log import NeoLogger
-from config import START_MESSAGE, STOP_MESSAGE, peer_mac
+from config import *
 
 
 # Initialize Wi-Fi in station mode
