@@ -88,4 +88,11 @@ class GameManager:
 
 
     def reset(self):
-        pass
+        if not self.gameActive:
+            return
+
+        endTime = utime.time_ns()
+        elapsedTime = (endTime - self.startTime) / 1_000_000_000
+        print("Game RESET! Time:", elapsedTime, "ms")
+
+        self.gameActive = False

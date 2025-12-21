@@ -22,5 +22,7 @@ TARGET_TIMEOUT_MS = 10000  # milliseconds
 
 
 peer_mac = b'\x58\xbf\x25\xaa\xd7\xec'  # Example peer MAC for unicast
+
+INIT_MESSAGE = "INIT"
 START_MESSAGE = "START"
 STOP_MESSAGE = "RESET"

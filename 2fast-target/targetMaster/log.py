@@ -30,6 +30,9 @@ class NeoLogger:
     def blue(self):
         self.log(0,0,255)
 
+    def yellow(self):
+        self.log(255,255,0)
+
     def off(self):
         self.log(0,0,0)
 
@@ -42,6 +45,12 @@ class NeoLogger:
                 self.green()
             elif color=="white":
                 self.white()
+            elif color=="purple":
+                self.purple()
+            elif color=="blue":
+                self.blue()
+            elif color=="yellow":
+                self.yellow()
             await asyncio.sleep(speed)
             self.off()
             await asyncio.sleep(speed)
