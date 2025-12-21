@@ -1,0 +1,33 @@
+https://micropython.org/download/ESP32_GENERIC_S3/
+
+
+Installation instructions
+Program your board using the esptool.py program, found here.
+
+Windows users: You may find the installed program is called esptool instead of esptool.py.
+
+Erasing
+If you are putting MicroPython on your board for the first time then you should first erase the entire flash using:
+
+esptool.py erase_flash
+esptool.py will try to detect the serial port with the ESP32 automatically, but if this fails or there might be more than one Espressif-based device attached to your computer then pass the --port option with the name of the target serial port. For example:
+
+esptool.py --port PORTNAME erase_flash
+On Linux, the port name is usually similar to /dev/ttyUSB or /dev/ttyACM0.
+On Mac, the port name is usually similar to /dev/cu.usbmodem01.
+On Windows, the port name is usually similar to COM4.
+Flashing
+Then deploy the firmware to the board, starting at address 0:
+
+esptool.py --baud 460800 write_flash 0 ESP32_BOARD_NAME-DATE-VERSION.bin
+Replace ESP32_BOARD_NAME-DATE-VERSION.bin with the .bin file downloaded from this page.
+
+As above, if esptool.py can't automatically detect the serial port then you can pass it explicitly on the command line instead. For example:
+
+esptool.py --port PORTNAME --baud 460800 write_flash 0 ESP32_BOARD_NAME-DATE-VERSION.bin
+Troubleshooting
+If flashing starts and then fails partway through, try removing the --baud 460800 option to flash at the slower default speed.
+
+If these steps don't work, consult the MicroPython ESP32 Troubleshooting steps and the esptool documentation.
+
+Important: From the options below, download the .bin file for your board.
