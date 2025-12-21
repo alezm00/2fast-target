@@ -39,7 +39,7 @@ lcd.putstr("2Fast Target\n\nWaiting for master\nconnection...")
 utime.sleep_ms(2000)
 
 connection_established = False
-def on_connection_established(msg):
+def on_connection_established(msg, mac):
     if msg == INIT_MESSAGE:
         global connection_established
         connection_established = True
@@ -47,12 +47,17 @@ def on_connection_established(msg):
         lcd.clear()
         lcd.putstr("Master connected!\nReady to start.")
         led_blink(led_pin, times=10, delay_ms=50)
+        return True
 
-
+asyncio.create_task(RemoteControler.messageReceiver(callback=on_connection_established))
 while not connection_established:
-    asyncio.gather(RemoteControler.sendMessage(INIT_MESSAGE),RemoteControler.messageReceiver(callback=on_connection_established))
+    asyncio.run(RemoteControler.sendMessage(INIT_MESSAGE,retry=1))
     utime.sleep_ms(1000)  # Wait before retrying
     pass
+
+
+utime.sleep_ms(2000)
+
 
 
 lcd.clear()

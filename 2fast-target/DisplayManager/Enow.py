@@ -52,16 +52,19 @@ class EspNowReemoteControler:
         return False
 
 
-    async def messageReceiver(self,callback=None):
+    async def messageReceiver(self, callback=None):
         while True:
             try:
                 async for mac, msg in self.E:
                     print(f"Received from {mac.hex()}: {msg.decode()}")
                     if callback:
-                        callback(msg.decode(), mac)
+                        exit = callback(msg.decode(), mac or None)
             except OSError as err:
                 print("Receive error:", err)
                 await asyncio.sleep(5)
+            if exit:
+                print("Exiting message receiver loop.", msg.decode())
+                return
 
     def close(self):
         self.E.active(False)
