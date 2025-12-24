@@ -21,28 +21,6 @@ game_task = None  # Track the running game task
 RemoteController = EspNowReemoteControler()
 
 
-# print("cols:", str([i.value() for i in column_pins]))
-# print("rows:", str([i.value() for i in row_pins]))
-
-# connection_established = False
-# def remoteControllerConnectionCallback(msg, mac):
-#     print("Connection callback message:", msg)
-#     global connection_established
-#     if msg == INIT_MESSAGE:
-#         connection_established = True
-#         print("Connection established with remote controller.")
-#         asyncio.create_task(Logger.blink(2, "yellow", 0.3))
-#         return True
-
-# def remoteControllerConnection():
-#     global connection_established
-#     asyncio.create_task(RemoteControler.messageReceiver(remoteControllerConnectionCallback))
-#     while not connection_established:
-#         print("Waiting for connection... Sending INIT message.")
-#         asyncio.run(RemoteControler.sendMessage(INIT_MESSAGE))
-#         utime.sleep_ms(1000)
-
-
 
 async def handleStart():
     global game_task
@@ -101,6 +79,14 @@ try:
 
     KeyPad = KeyPad(row_pins, column_pins, keys)
     LedManager = LedManager(LED_row_pins, LED_column_pins, keys)
+
+    while True:
+        key_pressed = KeyPad.read_keypad()
+        print(utime.time_ns(),"key pressed:", key_pressed)
+
+        utime.sleep_ms(10)
+
+
 
     gameManager = GameManager(KeyPad, LedManager, RemoteController)
     asyncio.run(RemoteController.messageReceiver(remoteControllerMessageHandler))
