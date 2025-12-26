@@ -34,22 +34,21 @@ class EspNowReemoteController:
             print("Failed to add peer:", err)
             raise
 
-    async def sendMessage(self, message, retry=5, callback=None):
-        print(f"Sending message: {message} to {self.peerMac.hex(),self.peerMac, retry} attempts")
-        for _ in range(retry):
+    async def messageReceiver(self, callback=None):
+        print("Starting message receiver...")
+        while True:
             try:
-                a = await self.E.asend(self.peerMac, message, sync=True)
-                if a:
-                    print(f"Sent message: {message}", a)
+                print("message receiver...")
+                async for mac, msg in self.E:
+                    print(f"Received from {mac.hex()}: {msg.decode()}")
                     if callback:
-                        callback()
-                    return True
-                else:
-                    print("Failed to send message", a)
+                        should_exit = await callback(msg, mac)  # Changed to awaito await
+                        if should_exit:
+                            print("Exiting message receiver loop.", msg.decode())
+                            return "Exit received"
             except OSError as err:
-                print("Send error:", err)
-            await asyncio.sleep(.5)
-        return False
+                print("Receive error:", err)
+                await asyncio.sleep(5)
 
 
     async def messageReceiver(self, callback=None):
