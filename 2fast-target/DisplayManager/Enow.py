@@ -8,7 +8,7 @@ from config import *
 
 
 
-class EspNowReemoteControler:
+class EspNowReemoteController:
     def __init__(self,peerMac=peer_mac):
         # Initialize Wi-Fi in station mode
         self.sta = network.WLAN(network.STA_IF)
@@ -59,13 +59,12 @@ class EspNowReemoteControler:
                     print(f"Received from {mac.hex()}: {msg.decode()}")
                     if callback:
                         exit = callback(msg.decode(), mac or None)
+                        # if exit:
+                        #     print("Exiting message receiver loop.", msg.decode())
+                        #     return
             except OSError as err:
                 print("Receive error:", err)
                 await asyncio.sleep(5)
-            if exit:
-                print("Exiting message receiver loop.", msg.decode())
-                return
-
     def close(self):
         self.E.active(False)
         self.sta.active(False)
