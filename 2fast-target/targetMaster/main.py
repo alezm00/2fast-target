@@ -80,12 +80,14 @@ try:
     KeyPad = KeyPad(row_pins, column_pins, keys)
     LedManager = LedManager(LED_row_pins, LED_column_pins, keys)
 
-    while True:
+    while KeyPad.read_keypad() is not None:
         key_pressed = KeyPad.read_keypad()
         print(utime.time_ns(),"key pressed:", key_pressed)
-
+        Logger.syncBlink(1, "yellow")
+        utime.sleep_ms(500)
+        logTimes = int(key_pressed) if key_pressed is not None else 0
+        Logger.syncBlink(logTimes, "red")
         utime.sleep_ms(10)
-
 
 
     gameManager = GameManager(KeyPad, LedManager, RemoteController)
