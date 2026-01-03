@@ -77,20 +77,37 @@ try:
     print("Starting game manager...")
 
 
-    KeyPad = KeyPad(row_pins, column_pins, keys)
-    LedManager = LedManager(LED_row_pins, LED_column_pins, keys)
+    Key_Pad = KeyPad(row_pins, column_pins, keys)
+    Led_manager = LedManager(LED_row_pins, LED_column_pins, keys)
 
-    while KeyPad.read_keypad() is not None:
-        key_pressed = KeyPad.read_keypad()
-        print(utime.time_ns(),"key pressed:", key_pressed)
-        Logger.syncBlink(1, "yellow")
+    while Key_Pad.read_keypad() is not None:
+        key_pressed = Key_Pad.read_keypad()
+        print(utime.time_ns(),"prelog key pressed:", key_pressed)
+        #Logger.syncBlink(1, "yellow")
         utime.sleep_ms(500)
         logTimes = int(key_pressed) if key_pressed is not None else 0
         Logger.syncBlink(logTimes, "red")
         utime.sleep_ms(10)
 
 
-    gameManager = GameManager(KeyPad, LedManager, RemoteController)
+    print("ledclear")
+    Led_manager.clear()
+   # utime.sleep_ms(5000)
+
+  #  print("traffic")
+
+ #   Led_manager.trafficLight()
+
+#    utime.sleep_ms(10000)
+ #   for i in range(25):
+  #      print("blinking led: " + str(i))
+   #     Led_manager.ledON(str(i))
+    #    utime.sleep_ms(2000)
+     #   Led_manager.ledOFF(str(i))
+      #  utime.sleep_ms(1000)
+
+
+    gameManager = GameManager(Key_Pad, Led_manager, RemoteController)
     asyncio.run(RemoteController.messageReceiver(remoteControllerMessageHandler))
 
 except KeyboardInterrupt:

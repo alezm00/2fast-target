@@ -1,3 +1,5 @@
+
+
 from machine import Pin
 from utime import sleep_ms
 import asyncio
@@ -28,10 +30,13 @@ class LedManager:
         for r in self.row_pins:
             r.init(Pin.OUT)
             r.value(0)
+            print("Inizialize led row pin", r, r.value())
 
         for c in self.column_pins:
             c.init(Pin.OUT)
             c.value(0)
+            print("Inizialize led row pin", c, c.value())
+
 
         # if len(self.row_pins) != len(self.keys) or len(self.column_pins) != len(self.keys[0]):
         #     raise LedException("Number of row/column pins does not match the key layout size.")
@@ -72,17 +77,25 @@ class LedManager:
         for c in self.column_pins:
             c.value(state)
 
+    def allToggleBlink(self, times, speed):
+        for i in range(times):
+            self.allToggle(True)
+            sleep_ms(speed)
+            self.allToggle(False)
+            sleep_ms(speed)
+
+        self.allToggle(False)
 
     def trafficLight(self):
         for c in self.column_pins:
-            c.value(1)
+            c.value(0)
 
         for i, r in enumerate(self.row_pins):
-            r.value(1)
+            r.value(0)
             sleep_ms(800)
             if i == len(self.row_pins) - 1:
-                sleep_ms(500 + (random.randint(0,500)))
-                r.value(1)
+                sleep_ms(500 + (random.randint(0,1000)))
+                r.value(0)
                 break
 
 
@@ -90,24 +103,24 @@ class LedManager:
     def clear(self):
         """Turns all LEDs off."""
         for r in self.row_pins:
-            r.value(0)
+            r.value(1)
         for c in self.column_pins:
-            c.value(0)
+            c.value(1)
 
     def ledON(self, index):
         for ri, row in enumerate(self.row_pins):
             for ci, col in enumerate(self.column_pins):
                 if self.keys[ri][ci] == index:
-                    # print("LED: pins: ", row, col, "| index:", index)
-                    row.value(1)
-                    col.value(1)
+                    print("ON LED pins: ", row, col, "| index:", index)
+                    row.value(0)
+                    col.value(0)
     def ledOFF(self, index):
         for ri, row in enumerate(self.row_pins):
             for ci, col in enumerate(self.column_pins):
                 if self.keys[ri][ci] == index:
-                    # print("LED: pins: ", row, col, "| index:", index)
-                    row.value(0)
-                    col.value(0)
+                    print("OFF LED pins: ", row, col, "| index:", index)
+                    row.value(1)
+                    col.value(1)
 
     # def clear(self):
     #     """Turns all LEDs off."""

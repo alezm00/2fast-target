@@ -49,6 +49,9 @@ class GameManager:
         if not self.gameActive:
             return
 
+        self.LedManager.allToggleBlink(4,100)
+
+
         self.gameActive = False
         endTime = utime.time_ns()
         elapsedTime = (endTime - self.startTime) / 1_000_000
