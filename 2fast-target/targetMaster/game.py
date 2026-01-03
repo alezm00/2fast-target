@@ -10,7 +10,7 @@ from config import *
 
 
 class GameManager:
-    def def __init__(self, keypad, led_manager, remote_controller):
+    def __init__(self, keypad, led_manager, remote_controller):
         self.sequence = None
         self.keypad = keypad
         self.Led_Manager = led_manager
