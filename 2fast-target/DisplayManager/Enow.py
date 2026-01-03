@@ -8,7 +8,7 @@ from config import *
 
 
 
-class EspNowReemoteController:
+class EspNowRemoteController:
     def __init__(self,peerMac=peer_mac):
         # Initialize Wi-Fi in station mode
         self.sta = network.WLAN(network.STA_IF)

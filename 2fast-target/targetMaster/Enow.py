@@ -21,7 +21,7 @@ NeoLogger = NeoLogger()
 
 
 
-class EspNowReemoteControler:
+class EspNowRemoteControler:
     def __init__(self,peer_mac=peer_mac):
         # Initialize AIOESPNow
         self.E = aioespnow.AIOESPNow()

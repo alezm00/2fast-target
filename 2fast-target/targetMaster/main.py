@@ -3,12 +3,11 @@ import asyncio
 import utime
 
 
-
 from config import *
 from keypad import KeyPad
 from led import LedManager
 from log import NeoLogger
-from Enow import EspNowReemoteControler
+from Enow import EspNowRemoteControler
 from game import GameManager
 
 Logger = NeoLogger()
@@ -18,8 +17,9 @@ gamestatus = "waiting"
 game_task = None  # Track the running game task
 
 
-RemoteController = EspNowReemoteControler()
-
+remote_controller = EspNowRemoteControler()
+Key_Pad = KeyPad(row_pins, column_pins, keys)
+Led_manager = LedManager(LED_row_pins, LED_column_pins, keys)
 
 
 async def handleStart():
@@ -28,7 +28,7 @@ async def handleStart():
     # Run blink and send message together
     await asyncio.gather(
         Logger.blink(5, "green", 0.2),
-        RemoteController.sendMessage(START_MESSAGE)
+        remote_controller.sendMessage(START_MESSAGE)
     )
 
     # Start game as a background task if not already running
@@ -42,9 +42,9 @@ async def handleStop():
     # Run blink and send message together
     await asyncio.gather(
         Logger.blink(5, "purple", 0.2),
-        RemoteController.sendMessage(STOP_MESSAGE)
+        remote_controller.sendMessage(STOP_MESSAGE)
     )
-
+    Led_manager.clear()
     # Cancel the game task if it's running
     if game_task and not game_task.done():
         print("Cancelling game task...")
@@ -76,43 +76,37 @@ async def remoteControllerMessageHandler(msg, mac):
 try:
     print("Starting game manager...")
 
-
-    Key_Pad = KeyPad(row_pins, column_pins, keys)
-    Led_manager = LedManager(LED_row_pins, LED_column_pins, keys)
-
-    while Key_Pad.read_keypad() is not None:
-        key_pressed = Key_Pad.read_keypad()
-        print(utime.time_ns(),"prelog key pressed:", key_pressed)
-        #Logger.syncBlink(1, "yellow")
+    key_pressed = Key_Pad.read_keypad()
+    while key_pressed is not None:
+        print(utime.time_ns(), "pre-log key pressed:", key_pressed)
         utime.sleep_ms(500)
         logTimes = int(key_pressed) if key_pressed is not None else 0
         Logger.syncBlink(logTimes, "red")
         utime.sleep_ms(10)
-
-
+        key_pressed = Key_Pad.read_keypad()
     print("ledclear")
     Led_manager.clear()
    # utime.sleep_ms(5000)
-
-  #  print("traffic")
-
- #   Led_manager.trafficLight()
-
-#    utime.sleep_ms(10000)
- #   for i in range(25):
-  #      print("blinking led: " + str(i))
+   #
+   # print("traffic")
+   #
+   # Led_manager.trafficLight()
+   #
+   # utime.sleep_ms(10000)
+   # for i in range(25):
+   #     print("blinking led: " + str(i))
    #     Led_manager.ledON(str(i))
-    #    utime.sleep_ms(2000)
-     #   Led_manager.ledOFF(str(i))
-      #  utime.sleep_ms(1000)
+   #     utime.sleep_ms(2000)
+   #     Led_manager.ledOFF(str(i))
+   #     utime.sleep_ms(1000)
 
 
-    gameManager = GameManager(Key_Pad, Led_manager, RemoteController)
-    asyncio.run(RemoteController.messageReceiver(remoteControllerMessageHandler))
+    gameManager = GameManager(Key_Pad, Led_manager, remote_controller)
+    asyncio.run(remote_controller.messageReceiver(remoteControllerMessageHandler))
 
 except KeyboardInterrupt:
     print("Stopping transceiver...")
-    RemoteController.close()
+    remote_controller.close()
 
 
 

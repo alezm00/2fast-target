@@ -6,17 +6,15 @@ from random import randrange
 
 
 from config import *
-from keypad import KeyPad
-from led import LedManager
-from log import NeoLogger
 
 
 
 class GameManager:
-    def __init__(self,keypad, LedManager, RemoteController):
+    def def __init__(self, keypad, led_manager, remote_controller):
+        self.sequence = None
         self.keypad = keypad
-        self.LedManager = LedManager
-        self.RemoteController = RemoteController
+        self.Led_Manager = led_manager
+        self.Remote_Controller = remote_controller
         self.startTime = utime.time_ns()
         self.gameActive = False
         self.buttonTimeout = TARGET_TIMEOUT_MS
@@ -27,19 +25,19 @@ class GameManager:
             array[i], array[j] = array[j], array[i]
 
     def randomizer(self):
-        x = [str(i) for i in range(0,25)]
-        self.shuffle(x)
-        return x
+        target_sequence = [str(i) for i in range(0,25)]
+        self.shuffle(target_sequence)
+        return target_sequence
 
     async def start(self):
         self.gameActive = True
         self.sequence = self.randomizer()
         print("Game Started! Sequence:", self.sequence)
 
-        self.LedManager.trafficLight()
+        self.Led_Manager.trafficLight()
 
 
-        self.LedManager.clear()
+        self.Led_Manager.clear()
 
 
         self.startTime = utime.time_ns()
@@ -48,15 +46,15 @@ class GameManager:
     async def stop(self):
         if not self.gameActive:
             return
-
-        self.LedManager.allToggleBlink(4,100)
+        end_time = utime.time_ns()
+        self.Led_Manager.allToggleBlink(4,100)
 
 
         self.gameActive = False
-        endTime = utime.time_ns()
-        elapsedTime = (endTime - self.startTime) / 1_000_000
-        print("Game Over! Time:", elapsedTime, "ms")
-        await self.RemoteController.sendMessage(f"ENDGAME:{elapsedTime:.2f}")
+
+        elapsed_time = (end_time - self.startTime) / 1_000_000
+        print("Game Over! Time:", elapsed_time, "ms")
+        await self.Remote_Controller.sendMessage(f"ENDGAME:{elapsed_time:.2f}")
 
 
     async def gameLoop(self):
@@ -66,7 +64,7 @@ class GameManager:
 
             if utime.ticks_diff(utime.ticks_ms(), buttonTimeoutStart) > self.buttonTimeout:
                 print("Timeout! No key pressed in time.")
-                self.LedManager.ledOFF(self.sequence[0])
+                self.Led_Manager.ledOFF(self.sequence[0])
                 self.sequence.pop(0)
                 buttonTimeoutStart = utime.ticks_ms()
 
@@ -78,12 +76,12 @@ class GameManager:
                 continue
 
             key_pressed = self.keypad.read_keypad()
-            self.LedManager.ledON(self.sequence[0])
+            self.Led_Manager.ledON(self.sequence[0])
 
             if key_pressed is not None and key_pressed == self.sequence[0]:
                 print("Correct key pressed:", key_pressed)
 
-                self.LedManager.ledOFF(self.sequence[0])
+                self.Led_Manager.ledOFF(self.sequence[0])
                 self.sequence.pop(0)
                 buttonTimeoutStart = utime.ticks_ms()
 

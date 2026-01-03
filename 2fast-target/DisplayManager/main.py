@@ -4,7 +4,7 @@ import utime
 import asyncio
 
 
-from Enow import EspNowReemoteController
+from Enow import EspNowRemoteController
 from config import *
 
 
@@ -23,7 +23,7 @@ def led_blink(pin, times=5, delay_ms=20):
 i2c = SoftI2C(sda=I2C_SDA_PIN, scl=I2C_SCL_PIN, freq=400000)
 lcd = I2cLcd(i2c, I2C_ADDR, I2C_NUM_ROWS, I2C_NUM_COLS)
 
-RemoteControler = EspNowReemoteController(peer_mac)
+RemoteControler = EspNowRemoteController(peer_mac)
 
 
 
