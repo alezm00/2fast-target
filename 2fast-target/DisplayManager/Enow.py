@@ -40,7 +40,7 @@ class EspNowRemoteController:
                 a = await self.E.asend(peer_mac, message, sync=True)
                 if a:
                     print(f"Sent message: {message}", a)
-                    await NeoLogger.blink(2, "green")  # Changed from asyncio.run()
+                    #await NeoLogger.blink(2, "green")  # Changed from asyncio.run()
                     if callback:
                         callback()
                     return True

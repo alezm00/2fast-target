@@ -17,7 +17,7 @@ LED_row_pins = [Pin(39),Pin(38),Pin(37),Pin(36),Pin(35)]
 
 
 TARGET_TIMEOUT_MS = 5000  # milliseconds
-DEMO_TARGET_TIMEOUT_MS = 10000  # milliseconds
+DEMO_TARGET_TIMEOUT_MS = 2000  # milliseconds
 
 
 

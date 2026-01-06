@@ -44,6 +44,15 @@ class GameManager:
         self.startTime = utime.time_ns()
         await self.gameLoop()
 
+    async def startDemo(self):
+        self.gameActive = True
+        self.Led_Manager.trafficLight()
+
+
+        self.Led_Manager.clear()
+
+        await self.demoMode()
+
     async def stop(self):
         if not self.gameActive:
             return
@@ -52,7 +61,7 @@ class GameManager:
 
 
         self.gameActive = False
-
+        self.Led_Manager.clear()
         elapsed_time = (end_time - self.startTime) / 1_000_000
         print("Game Over! Time:", elapsed_time, "ms")
         await self.Remote_Controller.sendMessage(f"ENDGAME:{elapsed_time:.2f}")
@@ -116,12 +125,13 @@ class GameManager:
                 buttonTimeoutStart = utime.ticks_ms()
                 await asyncio.sleep_ms(50)
 
-            await asyncio.sleep_ms(10)
+            await asyncio.sleep_ms(100)
 
             if len(self.sequence) == 0:
                 self.sequence = self.randomizer()
-                await self.Led_Manager.scrollAnimation(delay_ms=50)
-
+                self.Led_Manager.scrollAnimation()
+                await asyncio.sleep_ms(1000)
+        print("why are u here??")
     async def reset(self):
         if not self.gameActive:
             return

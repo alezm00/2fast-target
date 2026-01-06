@@ -50,12 +50,12 @@ class LedManager:
 
     async def scrollAnimation(self, delay_ms=100):
         for i in self.row_pins:
-            i.value(1)
-            for c in self.column_pins:
-                c.value(1)
-                await asyncio.sleep_ms(delay_ms)
-                c.value(0)
             i.value(0)
+            for c in self.column_pins:
+                c.value(0)
+                await asyncio.sleep_ms(delay_ms)
+                c.value(1)
+            i.value(1)
             await asyncio.sleep_ms(delay_ms)
 
         await asyncio.sleep_ms(1000)
@@ -63,12 +63,12 @@ class LedManager:
 
     async def scrollAnimationRev(self, delay_ms=100):
         for i in self.row_pins[::-1]:
-            i.value(1)
-            for c in self.column_pins[::-1]:
-                c.value(1)
-                await asyncio.sleep_ms(delay_ms)
-                c.value(0)
             i.value(0)
+            for c in self.column_pins[::-1]:
+                c.value(0)
+                await asyncio.sleep_ms(delay_ms)
+                c.value(1)
+            i.value(1)
             await asyncio.sleep_ms(delay_ms)
 
     def allToggle(self, state):

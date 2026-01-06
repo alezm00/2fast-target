@@ -1,5 +1,3 @@
-from ctypes import DEFAULT_MODE
-
 from machine import Pin
 import asyncio
 import utime
@@ -68,8 +66,8 @@ async def handleDemo():
     )
     Led_manager.clear()
 
-    if game_task and not game_task.done():
-        game_task = asyncio.create_task(gameManager.demoMode())
+    if game_task is None or game_task.done():
+        game_task = asyncio.create_task(gameManager.startDemo())
         print("Game started as background task")
 
 
