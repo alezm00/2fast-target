@@ -106,6 +106,7 @@ class GameManager:
         while self.gameActive:
             print("Demo waiting for key:", self.sequence[0])
 
+
             key_pressed = self.keypad.read_keypad()
             self.Led_Manager.ledON(self.sequence[0])
 
