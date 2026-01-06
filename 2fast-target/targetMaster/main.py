@@ -1,3 +1,5 @@
+from ctypes import DEFAULT_MODE
+
 from machine import Pin
 import asyncio
 import utime
@@ -30,7 +32,7 @@ async def handleStart():
         Logger.blink(5, "green", 0.2),
         remote_controller.sendMessage(START_MESSAGE)
     )
-
+    Led_manager.clear()
     # Start game as a background task if not already running
     if game_task is None or game_task.done():
         game_task = asyncio.create_task(gameManager.start())
@@ -44,7 +46,7 @@ async def handleStop():
         Logger.blink(5, "purple", 0.2),
         remote_controller.sendMessage(STOP_MESSAGE)
     )
-    Led_manager.clear()
+
     # Cancel the game task if it's running
     if game_task and not game_task.done():
         print("Cancelling game task...")
@@ -53,10 +55,24 @@ async def handleStop():
             await game_task
         except asyncio.CancelledError:
             print("Game task cancelled successfully")
-
     # Call reset method
     await gameManager.reset()
     game_task = None
+
+async def handleDemo():
+    global game_task
+
+    await asyncio.gather(
+        Logger.blink(5, "blue", 0.2),
+        remote_controller.sendMessage(MODE_MESSAGE)
+    )
+    Led_manager.clear()
+
+    if game_task and not game_task.done():
+        game_task = asyncio.create_task(gameManager.demoMode())
+        print("Game started as background task")
+
+
 
 async def remoteControllerMessageHandler(msg, mac):
     global gamestatus
@@ -66,6 +82,11 @@ async def remoteControllerMessageHandler(msg, mac):
         gamestatus = START_MESSAGE
         print("Received START command from remote controller.")
         await handleStart()
+
+    elif msg == MODE_MESSAGE:
+        gamestatus = MODE_MESSAGE
+        print("Received DEMO command from remote controller.")
+        await handleDemo()
 
     elif msg == STOP_MESSAGE:
         gamestatus = STOP_MESSAGE

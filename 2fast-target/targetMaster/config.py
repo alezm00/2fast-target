@@ -16,8 +16,8 @@ LED_row_pins = [Pin(39),Pin(38),Pin(37),Pin(36),Pin(35)]
 
 
 
-TARGET_TIMEOUT_MS = 10000  # milliseconds
-
+TARGET_TIMEOUT_MS = 5000  # milliseconds
+DEMO_TARGET_TIMEOUT_MS = 10000  # milliseconds
 
 
 
@@ -26,3 +26,4 @@ peer_mac = b'\x58\xbf\x25\xaa\xd7\xec'  # Example peer MAC for unicast
 INIT_MESSAGE = "INIT"
 START_MESSAGE = "START"
 STOP_MESSAGE = "RESET"
+MODE_MESSAGE = "DEMO"

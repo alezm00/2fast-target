@@ -34,6 +34,24 @@ class EspNowRemoteController:
             print("Failed to add peer:", err)
             raise
 
+    async def sendMessage(self, message, retry=5, callback=None):
+        for _ in range(retry):
+            try:
+                a = await self.E.asend(peer_mac, message, sync=True)
+                if a:
+                    print(f"Sent message: {message}", a)
+                    await NeoLogger.blink(2, "green")  # Changed from asyncio.run()
+                    if callback:
+                        callback()
+                    return True
+                else:
+                    print("Failed to send message", a)
+            except OSError as err:
+                print("Send error:", err)
+            await asyncio.sleep(.5)
+        return False
+
+
     async def messageReceiver(self, callback=None):
         print("Starting message receiver...")
         while True:
@@ -51,19 +69,6 @@ class EspNowRemoteController:
                 await asyncio.sleep(5)
 
 
-    async def messageReceiver(self, callback=None):
-        while True:
-            try:
-                async for mac, msg in self.E:
-                    print(f"Received from {mac.hex()}: {msg.decode()}")
-                    if callback:
-                        exit = callback(msg.decode(), mac or None)
-                        # if exit:
-                        #     print("Exiting message receiver loop.", msg.decode())
-                        #     return
-            except OSError as err:
-                print("Receive error:", err)
-                await asyncio.sleep(5)
     def close(self):
         self.E.active(False)
         self.sta.active(False)

@@ -17,3 +17,4 @@ peer_mac = b'\x3c\xdc\x75\x6b\xc6\x30'  # Example peer MAC for unicast
 INIT_MESSAGE = "INIT"
 START_MESSAGE = "START"
 STOP_MESSAGE = "RESET"
+MODE_MESSAGE = "DEMO"
