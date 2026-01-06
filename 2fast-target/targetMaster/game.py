@@ -3,11 +3,7 @@ import asyncio
 import utime
 from random import randrange
 
-
-
 from config import *
-
-
 
 class GameManager:
     def __init__(self, keypad, led_manager, remote_controller):
@@ -18,7 +14,7 @@ class GameManager:
         self.startTime = utime.time_ns()
         self.gameActive = False
         self.buttonTimeout = TARGET_TIMEOUT_MS
-        self.demoButtomTimeout = DEMO_TARGET_TIMEOUT_MS
+        self.demoButtonTimeout = DEMO_TARGET_TIMEOUT_MS
 
     def shuffle(self, array):
         for i in range(len(array)-1, 0, -1):
@@ -47,25 +43,8 @@ class GameManager:
     async def startDemo(self):
         self.gameActive = True
         self.Led_Manager.trafficLight()
-
-
         self.Led_Manager.clear()
-
         await self.demoMode()
-
-    async def stop(self):
-        if not self.gameActive:
-            return
-        end_time = utime.time_ns()
-        self.Led_Manager.allToggleBlink(4,100)
-
-
-        self.gameActive = False
-        self.Led_Manager.clear()
-        elapsed_time = (end_time - self.startTime) / 1_000_000
-        print("Game Over! Time:", elapsed_time, "ms")
-        await self.Remote_Controller.sendMessage(f"ENDGAME:{elapsed_time:.2f}")
-
 
     async def gameLoop(self):
         buttonTimeoutStart = utime.ticks_ms()
@@ -100,7 +79,7 @@ class GameManager:
 
 
     async def demoMode(self):
-        print("Staarting demo mode")
+        print("Starting demo mode")
         buttonTimeoutStart = utime.ticks_ms()
         self.sequence = self.randomizer()
         while self.gameActive:
@@ -114,7 +93,7 @@ class GameManager:
             key_pressed = self.keypad.read_keypad()
             self.Led_Manager.ledON(self.sequence[0])
 
-            if utime.ticks_diff(utime.ticks_ms(), buttonTimeoutStart) > self.demoButtomTimeout:
+            if utime.ticks_diff(utime.ticks_ms(), buttonTimeoutStart) > self.demoButtonTimeout:
                 print("Timeout! No key pressed in time.")
 
                 self.Led_Manager.ledOFF(self.sequence[0])
@@ -130,17 +109,31 @@ class GameManager:
                 buttonTimeoutStart = utime.ticks_ms()
                 await asyncio.sleep_ms(50)
 
-            await asyncio.sleep_ms(100)
+            await asyncio.sleep_ms(10)
+
+        await self.stop()
 
 
-        print("why are u here??")
+    async def stop(self):
+        if not self.gameActive:
+            return
+        end_time = utime.time_ns()
+        self.Led_Manager.allToggleBlink(4,100)
+
+
+        self.gameActive = False
+        self.Led_Manager.clear()
+        elapsed_time = (end_time - self.startTime) / 1_000_000
+        print("Game Over! Time:", elapsed_time, "ms")
+        await self.Remote_Controller.sendMessage(f"ENDGAME:{elapsed_time:.2f}")
+
     async def reset(self):
         if not self.gameActive:
             return
         self.Led_Manager.clear()
 
         endTime = utime.time_ns()
-        elapsed_time = (endTime - self.startTime) / 1_000_000_000
+        elapsed_time = (endTime - self.startTime) / 1_000_000
         print("Game RESET! Time:", elapsed_time, "ms")
         self.gameActive = False
         await self.Remote_Controller.sendMessage(f"ENDGAME_RESET:{elapsed_time:.2f}")

@@ -21,6 +21,7 @@ remote_controller = EspNowRemoteControler()
 Key_Pad = KeyPad(row_pins, column_pins, keys)
 Led_manager = LedManager(LED_row_pins, LED_column_pins, keys)
 
+gameManager = GameManager(Key_Pad, Led_manager, remote_controller)
 
 async def handleStart():
     global game_task
@@ -35,6 +36,21 @@ async def handleStart():
     if game_task is None or game_task.done():
         game_task = asyncio.create_task(gameManager.start())
         print("Game started as background task")
+
+
+async def handleDemo():
+    global game_task
+
+    await asyncio.gather(
+        Logger.blink(5, "blue", 0.2),
+        remote_controller.sendMessage(MODE_MESSAGE)
+    )
+    Led_manager.clear()
+
+    if game_task is None or game_task.done():
+        game_task = asyncio.create_task(gameManager.startDemo())
+        print("Game started as background task")
+
 
 async def handleStop():
     global game_task
@@ -57,18 +73,6 @@ async def handleStop():
     await gameManager.reset()
     game_task = None
 
-async def handleDemo():
-    global game_task
-
-    await asyncio.gather(
-        Logger.blink(5, "blue", 0.2),
-        remote_controller.sendMessage(MODE_MESSAGE)
-    )
-    Led_manager.clear()
-
-    if game_task is None or game_task.done():
-        game_task = asyncio.create_task(gameManager.startDemo())
-        print("Game started as background task")
 
 
 
@@ -95,14 +99,16 @@ async def remoteControllerMessageHandler(msg, mac):
 try:
     print("Starting game manager...")
 
+
     key_pressed = Key_Pad.read_keypad()
     while key_pressed is not None:
         print(utime.time_ns(), "pre-log key pressed:", key_pressed)
-        utime.sleep_ms(500)
         logTimes = int(key_pressed) if key_pressed is not None else 0
         Logger.syncBlink(logTimes, "red")
-        utime.sleep_ms(10)
+        utime.sleep_ms(30)
         key_pressed = Key_Pad.read_keypad()
+        utime.sleep_ms(2500)
+
     print("ledclear")
     Led_manager.clear()
    # utime.sleep_ms(5000)
@@ -120,7 +126,7 @@ try:
    #     utime.sleep_ms(1000)
 
 
-    gameManager = GameManager(Key_Pad, Led_manager, remote_controller)
+
     asyncio.run(remote_controller.messageReceiver(remoteControllerMessageHandler))
 
 except KeyboardInterrupt:
