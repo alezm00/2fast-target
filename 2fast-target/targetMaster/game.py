@@ -105,7 +105,11 @@ class GameManager:
         self.sequence = self.randomizer()
         while self.gameActive:
             print("Demo waiting for key:", self.sequence[0])
-
+            if len(self.sequence) < 2:
+                self.sequence = self.randomizer()
+                print("\n\n\n\n\n\n\n new run", self.sequence)
+                await asyncio.sleep_ms(1000)
+                buttonTimeoutStart = utime.ticks_ms()
 
             key_pressed = self.keypad.read_keypad()
             self.Led_Manager.ledON(self.sequence[0])
@@ -128,10 +132,7 @@ class GameManager:
 
             await asyncio.sleep_ms(100)
 
-            if len(self.sequence) == 0:
-                self.sequence = self.randomizer()
-                self.Led_Manager.scrollAnimation()
-                await asyncio.sleep_ms(1000)
+
         print("why are u here??")
     async def reset(self):
         if not self.gameActive:

@@ -59,7 +59,7 @@ class LedManager:
             await asyncio.sleep_ms(delay_ms)
 
         await asyncio.sleep_ms(1000)
-        asyncio.run(self.scrollAnimationRev())
+        asyncio.run(self.scrollAnimationRev(delay_ms))
 
     async def scrollAnimationRev(self, delay_ms=100):
         for i in self.row_pins[::-1]:
