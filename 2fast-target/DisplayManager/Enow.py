@@ -56,11 +56,12 @@ class EspNowRemoteController:
         print("Starting message receiver...")
         while True:
             try:
-                print("message receiver...")
+                print("message receiver...",self.E)
                 async for mac, msg in self.E:
-                    print(f"Received from {mac.hex()}: {msg.decode()}")
+                    print(f"Received from {mac.hex()}: {msg.decode()}", self.E)
                     if callback:
-                        should_exit = await callback(msg, mac)  # Changed to awaito await
+                        print("callback",msg,mac)
+                        should_exit = await callback(msg.decode(), mac)
                         if should_exit:
                             print("Exiting message receiver loop.", msg.decode())
                             return "Exit received"
