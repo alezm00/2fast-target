@@ -111,14 +111,14 @@ class LedManager:
         for ri, row in enumerate(self.row_pins):
             for ci, col in enumerate(self.column_pins):
                 if self.keys[ri][ci] == index:
-                    print("ON LED pins: ", row, col, "| index:", index)
+                    #print("ON LED pins: ", row, col, "| index:", index)
                     row.value(0)
                     col.value(0)
     def ledOFF(self, index):
         for ri, row in enumerate(self.row_pins):
             for ci, col in enumerate(self.column_pins):
                 if self.keys[ri][ci] == index:
-                    print("OFF LED pins: ", row, col, "| index:", index)
+                    #print("OFF LED pins: ", row, col, "| index:", index)
                     row.value(1)
                     col.value(1)
 
