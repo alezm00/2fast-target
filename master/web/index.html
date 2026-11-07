@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>2Fast Target</title>
+<style>
+:root{
+  --bg:#f3f5f8;--card:#fff;--ink:#14181f;--mut:#667085;--line:#dfe3ea;
+  --acc:#2563eb;--acc-ink:#fff;--ok:#16a34a;--warn:#d97706;--bad:#dc2626;--vio:#7c3aed;
+  --cell:#e8ecf2;--lit:#fbbf24;--r:14px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){
+  --bg:#0d1117;--card:#161b22;--ink:#e6edf3;--mut:#8b949e;--line:#2a313c;
+  --acc:#3b82f6;--cell:#222a35;--lit:#f5b301;
+}}
+:root[data-theme=dark]{--bg:#0d1117;--card:#161b22;--ink:#e6edf3;--mut:#8b949e;--line:#2a313c;--acc:#3b82f6;--cell:#222a35;--lit:#f5b301}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{display:flex;align-items:center;gap:12px;padding:12px 16px;padding-top:max(12px,env(safe-area-inset-top));position:sticky;top:0;background:var(--bg);z-index:5;border-bottom:1px solid var(--line)}
+header h1{font-size:1.1rem;margin:0;flex:1;letter-spacing:.02em}
+header h1 b{color:var(--acc)}
+.pill{padding:3px 12px;border-radius:99px;font-size:.8rem;font-weight:600;background:var(--cell);color:var(--mut)}
+.pill.running{background:var(--acc);color:var(--acc-ink)}
+.pill.countdown{background:var(--warn);color:#fff}
+.pill.finished{background:var(--vio);color:#fff}
+.pill.test{background:var(--warn);color:#fff}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--bad)}
+.dot.on{background:var(--ok)}
+nav{display:flex;gap:4px;padding:8px 16px;overflow-x:auto;scrollbar-width:none}
+nav button{flex:1;min-width:max-content;border:0;background:transparent;color:var(--mut);font:inherit;font-weight:600;padding:10px 14px;border-radius:10px;cursor:pointer}
+nav button.sel{background:var(--card);color:var(--ink);box-shadow:0 1px 3px #0002}
+main{max-width:980px;margin:0 auto;padding:4px 16px 48px}
+section{display:none}
+section.sel{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin:12px 0}
+.card h2{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin:0 0 12px}
+.grid2{display:grid;gap:12px;grid-template-columns:1fr}
+@media(min-width:760px){.grid2{grid-template-columns:1fr 1fr}.grid2.wide{grid-template-columns:1.1fr .9fr}}
+button.b{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:10px 16px;border-radius:10px;cursor:pointer;min-height:44px}
+button.b:active{transform:scale(.98)}
+button.b.pri{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
+button.b.bad{background:var(--bad);border-color:var(--bad);color:#fff}
+button.b:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.big{font-variant-numeric:tabular-nums;font-size:clamp(2.6rem,13vw,4.6rem);font-weight:700;line-height:1.05;letter-spacing:-.02em}
+.sub{color:var(--mut);font-size:.9rem}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px;margin-top:12px}
+.stat{background:var(--cell);border-radius:10px;padding:8px 10px}
+.stat b{display:block;font-size:1.25rem;font-variant-numeric:tabular-nums}
+.stat span{font-size:.72rem;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
+.modes{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+.mode{text-align:left;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:10px 12px;cursor:pointer;font:inherit}
+.mode b{display:block}
+.mode small{color:var(--mut);display:block;line-height:1.25;margin-top:2px}
+.mode.sel{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 10%,var(--card))}
+.matrix{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;max-width:380px;margin:0 auto;width:100%}
+.cell{aspect-ratio:1;border-radius:12px;background:var(--cell);border:2px solid transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:.8rem;color:var(--mut);position:relative;user-select:none;transition:background .08s}
+.cell small{font-size:.65rem;opacity:.8}
+.cell.lit{background:var(--lit);color:#222;box-shadow:0 0 14px var(--lit)}
+.cell.hit{background:color-mix(in srgb,var(--ok) 55%,var(--cell));color:#fff}
+.cell.missd{background:color-mix(in srgb,var(--bad) 45%,var(--cell));color:#fff}
+.matrix.test .cell{cursor:pointer}
+.cell.dis{opacity:.35;text-decoration:line-through}
+.cell.raw{border-color:var(--warn)}
+.cell.down{border-color:var(--ok);box-shadow:inset 0 0 0 3px var(--ok)}
+.cell.stuck{border-color:var(--bad);background:repeating-linear-gradient(45deg,var(--cell) 0 6px,color-mix(in srgb,var(--bad) 40%,var(--cell)) 6px 12px)}
+.cell.amb{border-color:var(--vio)}
+.cell .led{position:absolute;top:5px;right:5px;width:9px;height:9px;border-radius:50%;background:transparent;border:1px solid var(--line)}
+.cell.lit .led{background:#fff;border-color:#fff}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:.78rem;color:var(--mut);margin-top:10px;justify-content:center}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:4px;border:2px solid;vertical-align:-2px;margin-right:4px}
+.bars{display:flex;align-items:flex-end;gap:2px;height:64px;margin-top:12px}
+.bars span{flex:1;background:var(--acc);border-radius:3px 3px 0 0;min-height:2px}
+.badge{display:inline-block;background:var(--vio);color:#fff;border-radius:99px;padding:2px 12px;font-size:.8rem;font-weight:700}
+.banner{background:color-mix(in srgb,var(--warn) 18%,var(--card));border:1px solid var(--warn);border-radius:var(--r);padding:12px 16px;margin:12px 0;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.hide{display:none!important}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);font-size:.92rem}
+th{color:var(--mut);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em}
+.field{display:grid;grid-template-columns:1fr minmax(110px,150px);gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.field label{font-size:.92rem}
+.field input[type=number],.field input[type=text],.field select{font:inherit;width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);min-height:40px}
+.field input[type=checkbox]{width:24px;height:24px;justify-self:end}
+.field.err input,.field.err select{border-color:var(--bad)}
+.field .e{grid-column:1/-1;color:var(--bad);font-size:.8rem}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:99px;font-weight:600;z-index:20;max-width:90vw;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.show{opacity:1}
+.cd{display:flex;gap:6px;justify-content:center;margin:6px 0}
+.cd i{width:26px;height:26px;border-radius:50%;background:var(--cell)}
+.cd i.on{background:var(--bad);box-shadow:0 0 10px var(--bad)}
+progress{width:100%;height:8px;accent-color:var(--acc)}
+code{background:var(--cell);padding:1px 6px;border-radius:6px}
+</style>
+</head>
+<body>
+<header>
+  <h1><b>2Fast</b> Target</h1>
+  <span class="pill" id="pill">…</span>
+  <span class="dot" id="dot" title="Connessione"></span>
+</header>
+<nav id="nav">
+  <button data-t="play" class="sel">Gioca</button>
+  <button data-t="test">Test</button>
+  <button data-t="res">Risultati</button>
+  <button data-t="cfg">Impostazioni</button>
+</nav>
+<main>
+
+<!-- ============ GIOCA ============ -->
+<section id="t-play" class="sel">
+  <div class="banner hide" id="testBanner">
+    <span>La modalità test è attiva: le partite sono disabilitate.</span>
+    <button class="b pri" id="exitTest">Esci dal test</button>
+  </div>
+  <div class="grid2 wide">
+    <div>
+      <div class="card">
+        <h2 id="phaseLbl">Pronto</h2>
+        <div class="big" id="clock">0:00.000</div>
+        <div class="sub" id="clockSub">&nbsp;</div>
+        <div class="cd hide" id="cd"><i></i><i></i><i></i><i></i><i></i></div>
+        <progress id="prog" max="1" value="0" class="hide"></progress>
+        <div class="stats">
+          <div class="stat"><span>Colpiti</span><b id="sHits">0</b></div>
+          <div class="stat"><span>Mancati</span><b id="sMiss">0</b></div>
+          <div class="stat"><span>Errori</span><b id="sErr">0</b></div>
+          <div class="stat"><span>Avanzamento</span><b id="sProg">0</b></div>
+        </div>
+        <div class="row" style="margin-top:14px">
+          <button class="b pri" id="go" style="flex:1;font-size:1.15rem;min-height:54px">AVVIA</button>
+        </div>
+        <div class="sub" id="cmdInfo" style="margin-top:8px">&nbsp;</div>
+      </div>
+      <div class="card hide" id="resCard">
+        <h2>Ultimo risultato <span class="badge hide" id="recBadge">Nuovo record!</span></h2>
+        <div class="big" id="rTotal"></div>
+        <div class="sub" id="rSub"></div>
+        <div class="stats" id="rStats"></div>
+        <div class="bars" id="rBars"></div>
+        <div class="sub" style="margin-top:6px">Tempo di reazione di ogni bersaglio, nell'ordine</div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h2>Matrice bersagli</h2>
+        <div class="matrix" id="gridPlay"></div>
+        <div class="legend" id="playLegend"></div>
+      </div>
+      <div class="card">
+        <h2>Modalità di gioco</h2>
+        <div class="modes" id="modes"></div>
+        <details style="margin-top:12px"><summary class="sub" style="cursor:pointer">Parametri di questa partita</summary>
+          <div id="modeParams"></div>
+          <div class="sub" style="margin-top:6px">Valgono solo per le prossime partite avviate da qui. I valori predefiniti si cambiano in Impostazioni.</div>
+        </details>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TEST ============ -->
+<section id="t-test">
+  <div class="card" id="testOff">
+    <h2>Modalità test e taratura</h2>
+    <p>Mostra la matrice in tempo reale, permette di accendere ogni LED, vedere quali bersagli vengono premuti e associare ogni bersaglio al suo tasto. Durante il test non si può giocare.</p>
+    <button class="b pri" id="enterTest">Entra in modalità test</button>
+  </div>
+  <div id="testOn" class="hide">
+    <div class="grid2 wide">
+      <div class="card">
+        <h2>Stato matrice <span class="sub" id="hz"></span></h2>
+        <div class="matrix test" id="gridTest"></div>
+        <div class="legend">
+          <span><i style="border-color:var(--lit);background:var(--lit)"></i>LED acceso</span>
+          <span><i style="border-color:var(--ok)"></i>premuto</span>
+          <span><i style="border-color:var(--warn)"></i>contatto grezzo</span>
+          <span><i style="border-color:var(--vio)"></i>ambiguo (fantasma)</span>
+          <span><i style="border-color:var(--bad)"></i>bloccato</span>
+          <span><i style="border-color:var(--mut);opacity:.4"></i>disattivato</span>
+        </div>
+        <div class="sub" id="faultMsg" style="text-align:center;margin-top:8px"></div>
+      </div>
+      <div>
+        <div class="card">
+          <h2>Controllo LED</h2>
+          <div class="row" style="margin-bottom:10px">
+            <label><input type="radio" name="clk" value="led" checked> Tocco = accendi/spegni LED</label>
+            <label><input type="radio" name="clk" value="en"> Tocco = attiva/disattiva bersaglio</label>
+          </div>
+          <div class="row">
+            <button class="b" data-p="all">Tutti accesi</button>
+            <button class="b" data-p="none">Tutti spenti</button>
+            <button class="b" data-p="chase">Scorrimento</button>
+            <button class="b" data-p="rows">Righe</button>
+            <button class="b" data-p="cols">Colonne</button>
+          </div>
+          <div class="sub" id="lastKey" style="margin-top:10px">Ultimo bersaglio premuto: –</div>
+          <div class="row" style="margin-top:10px"><button class="b" id="clrStats">Azzera contatori</button></div>
+        </div>
+        <div class="card">
+          <h2>Associazione bersagli ↔ tasti</h2>
+          <div id="learnOff">
+            <p class="sub">Accende i LED uno alla volta: premi il bersaglio che si accende. Serve se LED e tasti non corrispondono. Un bersaglio rotto o assente si può saltare (viene disattivato).</p>
+            <div class="row"><button class="b pri" id="learnStart">Avvia associazione</button><button class="b" id="mapReset">Ripristina predefinita</button></div>
+          </div>
+          <div id="learnOn" class="hide">
+            <div class="big" style="font-size:2rem" id="learnTitle"></div>
+            <progress id="learnProg" max="25" value="0"></progress>
+            <div class="sub" id="learnMsg"></div>
+            <div class="row" style="margin-top:10px">
+              <button class="b" id="learnBack">Indietro</button>
+              <button class="b" id="learnSkip">Salta (disattiva)</button>
+              <button class="b bad" id="learnCancel">Annulla</button>
+            </div>
+          </div>
+        </div>
+        <div class="row"><button class="b pri" id="leaveTest" style="flex:1">Esci dal test</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ RISULTATI ============ -->
+<section id="t-res">
+  <div class="card"><h2>Migliori risultati</h2><div class="stats" id="bests"></div></div>
+  <div class="card"><h2>Ultime partite</h2>
+    <div style="overflow-x:auto"><table><thead><tr><th>#</th><th>Modalità</th><th>Tempo</th><th>Colpiti</th><th>Manc.</th><th>Err.</th><th>Medio</th></tr></thead><tbody id="recent"></tbody></table></div>
+    <div class="row" style="margin-top:12px"><button class="b" id="clrRes">Cancella storico</button></div>
+  </div>
+</section>
+
+<!-- ============ IMPOSTAZIONI ============ -->
+<section id="t-cfg">
+  <div class="card"><h2>Dispositivo</h2><div id="infoBox" class="sub"></div></div>
+  <form id="cfgForm"></form>
+  <div class="row" style="margin-top:12px">
+    <button class="b pri" id="saveCfg">Salva impostazioni</button>
+    <button class="b" id="reboot">Riavvia</button>
+    <button class="b bad" id="factory">Ripristina predefiniti</button>
+  </div>
+  <div class="banner hide" id="rebootBanner" style="margin-top:12px"><span>Alcune modifiche (WiFi) richiedono il riavvio.</span><button class="b pri" id="rebootNow">Riavvia ora</button></div>
+</section>
+
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const N=25;
+let S={}, info=null, cfg=null, lastRid=-1, result=null, tab='play', tRx=0, sel=null, inflight=false, formDirty=false;
+
+async function api(path, body){
+  const o = body===undefined ? {} : {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)};
+  const ctl = new AbortController(); const to = setTimeout(()=>ctl.abort(), 3000);
+  try{ const r = await fetch(path,{...o,signal:ctl.signal}); let j={}; try{ j=await r.json(); }catch(e){} return {ok:r.ok,j}; }
+  finally{ clearTimeout(to); }
+}
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toast.h); toast.h=setTimeout(()=>t.classList.remove('show'),2600); }
+async function act(path, body, okMsg){
+  try{ const r = await api(path, body||{}); if(!r.ok) toast(r.j.error || 'Operazione non riuscita'); else if(okMsg) toast(okMsg); poll(true); return r; }
+  catch(e){ toast('Dispositivo non raggiungibile'); }
+}
+const fmt = ms => { if(ms==null||ms<0) return '–'; ms=Math.round(ms); const m=Math.floor(ms/60000), s=Math.floor(ms%60000/1000), r=ms%1000; return m+':'+String(s).padStart(2,'0')+'.'+String(r).padStart(3,'0'); };
+const fmtS = ms => ms==null ? '–' : (ms/1000).toFixed(2)+' s';
+const bit = (m,i) => (m>>>i)&1;
+
+/* ---------- tabs ---------- */
+$('#nav').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; showTab(b.dataset.t); });
+function showTab(t){
+  tab=t; $$('#nav button').forEach(b=>b.classList.toggle('sel',b.dataset.t===t));
+  $$('main > section').forEach(s=>s.classList.toggle('sel',s.id==='t-'+t));
+  if(t==='res') loadResults(); if(t==='cfg') loadCfg();
+}
+
+/* ---------- grids ---------- */
+function buildGrid(el, onclick){
+  el.innerHTML=''; for(let i=0;i<N;i++){ const c=document.createElement('div'); c.className='cell'; c.dataset.i=i; c.innerHTML='<span class="led"></span><b>'+i+'</b><small></small>'; if(onclick) c.onclick=()=>onclick(i); el.appendChild(c); }
+}
+const cellsPlay=()=>$$('#gridPlay .cell'), cellsTest=()=>$$('#gridTest .cell');
+buildGrid($('#gridPlay'));
+buildGrid($('#gridTest'), i=>{
+  if(!S.app || S.app==='play') return;
+  if(document.querySelector('input[name=clk]:checked').value==='en'){
+    if(!cfg) return;
+    const en = cfg.enabled.slice(); en[i]=!en[i];
+    if(!en.some(Boolean)){ toast('Serve almeno un bersaglio attivo'); return; }
+    api('/api/config',{enabled:en}).then(r=>{ if(r.ok){ cfg.enabled=en; renderTest(); } else toast('Operazione non riuscita'); });
+  } else act('/api/test/led',{i:i,on:!bit(S.lit,i)});
+});
+
+/* ---------- state polling ---------- */
+async function poll(now){
+  if(inflight && !now) return;
+  inflight=true;
+  try{
+    const r = await api('/api/state'); S=r.j; tRx=performance.now(); $('#dot').classList.add('on');
+    if(S.rid!==lastRid){ lastRid=S.rid; if(S.phase==='finished') loadResult(); else if(S.rid===0) {result=null;} }
+    render();
+  }catch(e){ $('#dot').classList.remove('on'); }
+  inflight=false;
+}
+(function loop(){ poll(); setTimeout(loop, (tab==='test'&&S.app&&S.app!=='play')?130:220); })();
+
+async function loadResult(){ try{ const r=await api('/api/result'); if(r.ok){ result=r.j.result; renderResult(); } }catch(e){} }
+
+/* ---------- render: play ---------- */
+const PH = {idle:'Pronto',countdown:'Preparati…',running:'In corso',finished:'Partita terminata'};
+function render(){
+  const app=S.app||'play', ph=S.phase||'idle';
+  const pill=$('#pill'); const label = app==='play' ? PH[ph] : (app==='learn'?'Associazione':'Test');
+  pill.textContent=label; pill.className='pill '+(app==='play'?ph:'test');
+  $('#testBanner').classList.toggle('hide', app==='play');
+  $('#phaseLbl').textContent = PH[ph]||'';
+  $('#sHits').textContent=S.hits||0; $('#sMiss').textContent=S.miss||0; $('#sErr').textContent=S.err||0;
+  $('#sProg').textContent = S.total ? (S.prog||0)+' / '+S.total : (S.prog||0);
+  const go=$('#go'); const active = ph==='running'||ph==='countdown';
+  go.textContent = active ? 'STOP' : 'AVVIA'; go.className='b '+(active?'bad':'pri'); go.disabled = app!=='play';
+  $('#cd').classList.toggle('hide', ph!=='countdown');
+  $$('#cd i').forEach((e,i)=>e.classList.toggle('on', i<(S.cd||0)));
+  const pr=$('#prog'); pr.classList.toggle('hide', !(ph==='running' && S.total));
+  if(S.total){ pr.max=S.total; pr.value=S.prog||0; }
+  if(S.cmd && S.cmd[2]<8000){ const src={web:'dal sito',remote:'dal telecomando',button:'dal pulsante'}[S.cmd[0]]||S.cmd[0]; $('#cmdInfo').textContent=(S.cmd[1]==='start'?'Avvio ':'Stop ')+src; } else $('#cmdInfo').innerHTML='&nbsp;';
+  $('#resCard').classList.toggle('hide', !result || ph==='running' || ph==='countdown');
+  // modes
+  if(info) renderModes();
+  // play grid
+  const cs=cellsPlay(); const tt = (ph==='finished'&&result)?result.tt:null;
+  let mn=1e9,mx=0; if(tt) tt.forEach(v=>{ if(v>=0){ mn=Math.min(mn,v); mx=Math.max(mx,v);} });
+  cs.forEach((c,i)=>{
+    const lit=bit(S.lit,i), hit=bit(S.hit,i), ms=bit(S.miss_m,i), dis = cfg && !cfg.enabled[i];
+    c.className='cell'+(lit?' lit':'')+(hit&&!lit?' hit':'')+(ms&&!lit?' missd':'')+(dis?' dis':'');
+    const sm=c.querySelector('small'); c.style.background='';
+    if(tt && tt[i]>=0){ const k=mx>mn?(tt[i]-mn)/(mx-mn):0; c.style.background='hsl('+(130-130*k)+' 65% 42%)'; c.style.color='#fff'; sm.textContent=(tt[i]/1000).toFixed(2); }
+    else { c.style.color=''; sm.textContent=''; }
+  });
+  $('#playLegend').innerHTML = ph==='finished'&&result ? '<span>Colore = tempo di reazione (verde veloce → rosso lento)</span>' : '<span><i style="border-color:var(--lit);background:var(--lit)"></i>da colpire</span><span><i style="border-color:var(--ok);background:var(--ok)"></i>colpito</span><span><i style="border-color:var(--bad);background:var(--bad)"></i>mancato</span>';
+  // test
+  const inTest = app!=='play';
+  $('#testOff').classList.toggle('hide', inTest); $('#testOn').classList.toggle('hide', !inTest);
+  if(inTest) renderTest();
+}
+function renderModes(){
+  const box=$('#modes'); if(!box.dataset.built){
+    box.dataset.built=1;
+    info.modes.forEach(m=>{ const b=document.createElement('button'); b.className='mode'; b.dataset.id=m.id; b.innerHTML='<b>'+m.name+'</b><small>'+m.desc+'</small>'; b.onclick=()=>{ sel=m.id; try{localStorage.mode=sel;}catch(e){} renderModes(); buildParams(); }; box.appendChild(b); });
+  }
+  if(!sel) sel = (()=>{ try{return localStorage.mode;}catch(e){} })() || S.mode || 'sequence';
+  if(!info.modes.some(m=>m.id===sel)) sel='sequence';
+  $$('#modes .mode').forEach(b=>b.classList.toggle('sel', b.dataset.id===sel));
+  if(!$('#modeParams').dataset.mode) buildParams();
+}
+function field(spec, val, id){
+  const [key,kind,def,a,b,grp,label]=spec; let inp;
+  if(kind==='bool') inp='<input type="checkbox" id="'+id+'" '+(val?'checked':'')+'>';
+  else if(kind==='choice') inp='<select id="'+id+'">'+a.map(o=>'<option value="'+o+'"'+(o===val?' selected':'')+'>'+((info.modes.find(m=>m.id===o)||{}).name||o)+'</option>').join('')+'</select>';
+  else if(kind==='int') inp='<input type="number" id="'+id+'" value="'+val+'" min="'+a+'" max="'+b+'" step="1" inputmode="numeric">';
+  else inp='<input type="text" id="'+id+'" value="'+String(val).replace(/"/g,'&quot;')+'" maxlength="'+b+'" autocomplete="off">';
+  return '<div class="field" data-k="'+key+'"><label for="'+id+'">'+label+'</label>'+inp+'<div class="e"></div></div>';
+}
+function readField(spec, id){
+  const el=document.getElementById(id), k=spec[1];
+  return k==='bool'?el.checked : k==='int'?(el.value===''?NaN:parseInt(el.value,10)) : el.value;
+}
+async function buildParams(){
+  if(!info) return; if(!cfg) await loadCfg(true);
+  const m=info.modes.find(x=>x.id===sel); if(!m||!cfg) return;
+  $('#modeParams').dataset.mode=sel;
+  $('#modeParams').innerHTML = m.params.map(k=>{ const sp=info.schema.find(s=>s[0]===k); return field(sp, cfg.values[k], 'p_'+k); }).join('');
+}
+$('#go').onclick=async()=>{
+  const active = S.phase==='running'||S.phase==='countdown';
+  if(active) return act('/api/stop');
+  const m=info.modes.find(x=>x.id===sel); const params={};
+  m.params.forEach(k=>{ const sp=info.schema.find(s=>s[0]===k); const el=document.getElementById('p_'+k); if(el) params[k]=readField(sp,'p_'+k); });
+  act('/api/start',{mode:sel,params});
+};
+$('#exitTest').onclick=$('#leaveTest').onclick=()=>act('/api/appmode',{mode:'play'});
+$('#enterTest').onclick=()=>act('/api/appmode',{mode:'test'});
+
+/* clock: interpolated between polls so the display is smooth */
+(function tick(){
+  const ph=S.phase; let ms=S.el||0, sub='&nbsp;';
+  const dt = performance.now()-tRx;
+  if(ph==='running'){
+    ms += dt;
+    if(S.mode==='timed' && S.rem!=null){ const r=Math.max(0,S.rem-dt); $('#clock').textContent=fmt(r); sub='Tempo rimasto · trascorso '+fmt(ms); }
+    else { $('#clock').textContent=fmt(ms); if(S.rem!=null) sub='Tempo massimo sul bersaglio: '+fmtS(Math.max(0,S.rem-dt)); }
+  } else if(ph==='countdown'){ $('#clock').textContent='0:00.000'; sub='Attendi il via…'; }
+  else $('#clock').textContent=fmt(ph==='finished'?ms:0);
+  $('#clockSub').innerHTML=sub;
+  requestAnimationFrame(tick);
+})();
+
+function renderResult(){
+  const r=result; if(!r) return;
+  const m=(info&&info.modes.find(x=>x.id===r.mode))||{name:r.mode};
+  $('#recBadge').classList.toggle('hide', !S.record);
+  $('#rTotal').textContent = r.mode==='timed' ? r.hits+' colpi' : fmt(r.total);
+  $('#rSub').textContent = m.name+(r.aborted?' · interrotta':'')+(r.n?' · #'+r.n:'')+(r.pen?' · penalità '+fmtS(r.pen):'');
+  const st=[['Tempo totale',fmt(r.total)],['Colpiti',r.hits],['Mancati',r.miss],['Errori',r.err],['Reazione media',fmtS(r.avg)],['Migliore',fmtS(r.best)],['Peggiore',fmtS(r.worst)]];
+  $('#rStats').innerHTML=st.map(s=>'<div class="stat"><span>'+s[0]+'</span><b>'+s[1]+'</b></div>').join('');
+  const mx=Math.max(1,...r.rt);
+  $('#rBars').innerHTML=r.rt.map(v=>'<span title="'+v+' ms" style="height:'+Math.max(3,v/mx*100)+'%"></span>').join('');
+}
+
+/* ---------- render: test ---------- */
+function renderTest(){
+  const learn = S.app==='learn';
+  cellsTest().forEach((c,i)=>{
+    const dis = cfg && !cfg.enabled[i];
+    c.className='cell'+(bit(S.lit,i)?' lit':'')+(bit(S.down,i)?' down':bit(S.raw,i)?' raw':'')+(bit(S.amb,i)?' amb':'')+(bit(S.stuck,i)?' stuck':'')+(dis?' dis':'');
+    c.querySelector('small').textContent = S.presses ? '×'+S.presses[i] : '';
+  });
+  $('#hz').textContent = S.hz ? '· scansione '+S.hz+' Hz' : '';
+  $('#faultMsg').textContent = S.fault ? '⚠ Troppi tasti premuti insieme: possibile cortocircuito, input ignorato' : (S.stuck?'⚠ Bersaglio bloccato (premuto da troppo tempo): ignorato':'');
+  $('#lastKey').textContent = 'Ultimo bersaglio premuto: ' + (S.last!=null? S.last : '–');
+  $('#learnOff').classList.toggle('hide', learn); $('#learnOn').classList.toggle('hide', !learn);
+  if(learn && S.learn){
+    $('#learnTitle').textContent='Premi il bersaglio acceso ('+Math.min(S.learn.i+1,N)+'/'+N+')';
+    $('#learnProg').value=S.learn.i; $('#learnMsg').textContent=S.learn.msg;
+  }
+}
+$$('[data-p]').forEach(b=>b.onclick=()=>act('/api/test/led',{pattern:b.dataset.p}));
+$('#clrStats').onclick=()=>act('/api/test/reset');
+$('#learnStart').onclick=()=>act('/api/test/learn',{action:'start'});
+$('#learnSkip').onclick=()=>act('/api/test/learn',{action:'skip'});
+$('#learnBack').onclick=()=>act('/api/test/learn',{action:'back'});
+$('#learnCancel').onclick=()=>act('/api/test/learn',{action:'cancel'});
+$('#mapReset').onclick=async()=>{ if(!confirm('Ripristinare la corrispondenza bersagli/tasti predefinita?')) return;
+  const r=await api('/api/config',{keymap:[...Array(N).keys()],enabled:Array(N).fill(true)}); if(r.ok){ await loadCfg(true); toast('Ripristinata'); } };
+
+/* ---------- results ---------- */
+async function loadResults(){
+  if(!info) await loadInfo();
+  const r=await api('/api/results'); if(!r.ok) return; const d=r.j;
+  const nm=id=>(info.modes.find(m=>m.id===id)||{name:id}).name;
+  const bests=Object.keys(d.best||{}).map(k=>{ const v=d.best[k].v; const txt = k==='timed'? v+' colpi' : k==='reflex'? fmtS(v) : fmt(v); return '<div class="stat"><span>'+nm(k)+'</span><b>'+txt+'</b></div>'; });
+  $('#bests').innerHTML = bests.join('') || '<span class="sub">Nessun record ancora.</span>';
+  $('#recent').innerHTML = (d.recent||[]).slice().reverse().map(x=>'<tr><td>'+x.n+'</td><td>'+nm(x.mode)+(x.aborted?' (interr.)':'')+'</td><td>'+fmt(x.total)+'</td><td>'+x.hits+'</td><td>'+x.miss+'</td><td>'+x.err+'</td><td>'+fmtS(x.avg)+'</td></tr>').join('') || '<tr><td colspan="7" class="sub">Nessuna partita registrata.</td></tr>';
+}
+$('#clrRes').onclick=async()=>{ if(confirm('Cancellare lo storico e i record?')){ await act('/api/results/clear',{},'Storico cancellato'); loadResults(); } };
+
+/* ---------- settings ---------- */
+const GROUPS=[['game','Partita'],['sequence','Sequenza'],['reflex','Riflessi'],['timed','A tempo'],['multi','Multi-bersaglio'],['demo','Demo'],['input','Lettura tastiera / taratura'],['wifi','WiFi'],['remote','Telecomando']];
+async function loadInfo(){ const r=await api('/api/info'); if(r.ok){ info=r.j; renderInfo(); } }
+async function loadCfg(quiet){ if(!info) await loadInfo(); const r=await api('/api/config'); if(r.ok){ cfg=r.j; if(!quiet) buildForm(); } }
+function renderInfo(){
+  const n=info.net;
+  $('#infoBox').innerHTML = 'Versione <b>'+info.version+'</b> · rete <b>'+n.ap_ssid+'</b> ('+n.ap_ip+')'+(n.sta_ip?' · anche su <b>'+n.sta_ip+'</b>':'')+'<br>MAC per il telecomando: <code>'+n.sta_mac+'</code> · canale '+n.channel+' · memoria libera '+Math.round(info.free/1024)+' kB · acceso da '+Math.round(info.uptime/60)+' min'+(n.error?'<br><b style="color:var(--bad)">Errore WiFi: '+n.error+'</b>':'');
+}
+function buildForm(){
+  if(!cfg||!info) return;
+  $('#cfgForm').innerHTML = GROUPS.map(([g,title])=>'<div class="card"><h2>'+title+'</h2>'+info.schema.filter(s=>s[5]===g).map(s=>field(s,cfg.values[s[0]],'c_'+s[0])).join('')+'</div>').join('');
+}
+$('#saveCfg').onclick=async()=>{
+  if(!cfg) return; const ch={};
+  info.schema.forEach(s=>{ const el=document.getElementById('c_'+s[0]); if(!el) return; const v=readField(s,'c_'+s[0]); if(v!==cfg.values[s[0]]) ch[s[0]]=v; });
+  $$('#cfgForm .field').forEach(f=>{ f.classList.remove('err'); f.querySelector('.e').textContent=''; });
+  if(!Object.keys(ch).length){ toast('Nessuna modifica'); return; }
+  const r=await api('/api/config',ch);
+  if(!r.ok){ const er=r.j.errors||{}; Object.keys(er).forEach(k=>{ const f=document.querySelector('#cfgForm .field[data-k="'+k+'"]'); if(f){ f.classList.add('err'); f.querySelector('.e').textContent=er[k]; } }); toast('Controlla i campi evidenziati'); return; }
+  toast('Salvato'); await loadCfg(); $('#modeParams').dataset.mode=''; buildParams();
+  $('#rebootBanner').classList.toggle('hide', !r.j.reboot);
+};
+async function doReboot(){ await api('/api/reboot',{}); toast('Riavvio in corso…'); }
+$('#reboot').onclick=()=>{ if(confirm('Riavviare il dispositivo?')) doReboot(); };
+$('#rebootNow').onclick=doReboot;
+$('#factory').onclick=async()=>{ if(!confirm('Ripristinare TUTTE le impostazioni (incluso WiFi e associazione bersagli)?')) return; const r=await api('/api/config/reset',{}); if(r.ok){ toast('Ripristinato: riavvia il dispositivo'); $('#rebootBanner').classList.remove('hide'); await loadCfg(); } };
+
+(async()=>{ await loadInfo(); await loadCfg(true); renderModes(); buildParams(); })();
+</script>
+</body>
+</html>
