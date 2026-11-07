@@ -18,12 +18,12 @@ pulsante sul master o da un **telecomando radio** (un piccolo ESP32 con un pulsa
 | `master/` | firmware del master: scansione bersagli, LED, giochi, server web, telecomando |
 | `master/web/index.html` | interfaccia web (un solo file, nessuna dipendenza da internet) |
 | `remote/` | firmware del telecomando radio (ESP32 qualsiasi) |
-| `tests/` | test su PC (47) e simulatore del master |
-| `firmware/` | MicroPython 1.27 per ESP32 e ESP32‑S3 |
+| `tests/` | test su PC (50) e simulatore del master |
+| `firmware/` | MicroPython 1.29.0 per ESP32 e ESP32‑S3 |
 
 ## Installazione
 
-Serve MicroPython (vedi `firmware/`). Con [`mpremote`](https://docs.micropython.org/en/latest/reference/mpremote.html):
+Serve MicroPython **1.29** o successivo (vedi `firmware/`; il codice funziona anche con le versioni precedenti). Con [`mpremote`](https://docs.micropython.org/en/latest/reference/mpremote.html):
 
 ```bash
 # master (ESP32-S3): copia i file .py e la cartella web/
@@ -134,9 +134,26 @@ La rete è protetta dalla password WiFi, ma l'API non ha un'ulteriore autenticaz
 ## Sviluppo e test su PC
 
 ```bash
-python3 -m unittest discover -s tests     # 47 test: tastiera (fantasmi, rimbalzi, bloccati), LED, giochi, sessioni, impostazioni, API web
+python3 -m unittest discover -s tests     # 50 test: tastiera (fantasmi, rimbalzi, bloccati), LED, giochi, sessioni, impostazioni, API web
 python3 tests/sim.py                      # master simulato: apri http://localhost:8080
 ```
 
 I test usano un modello elettrico della matrice (compresi i tasti fantasma) al posto dei pin.
 Non sostituiscono la prova sull'hardware: lo sketch non è stato ancora provato su una scheda reale.
+
+## Flash del firmware MicroPython
+
+Le immagini 1.29.0 sono in `firmware/`. Con [`esptool`](https://docs.espressif.com/projects/esptool/):
+
+```bash
+# ESP32‑S3 (master): indirizzo 0
+esptool.py erase_flash
+esptool.py --baud 460800 write_flash 0 firmware/ESP32-S3/ESP32_GENERIC_S3-20260824-v1.29.0.bin
+
+# ESP32 (telecomando): indirizzo 0x1000
+esptool.py erase_flash
+esptool.py --baud 460800 write_flash 0x1000 firmware/ESP32/ESP32_GENERIC-20260824-v1.29.0.bin
+```
+
+`erase_flash` cancella anche impostazioni e risultati salvati. Dalla 1.29 l'API di rete usa
+`network.WLAN.IF_STA`/`IF_AP`, `key=` e `security=`: il codice usa quella nuova e, se manca, la vecchia.

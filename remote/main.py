@@ -30,7 +30,8 @@ def blink(times, ms=60):
 
 
 def setup():
-    sta = network.WLAN(network.STA_IF)
+    # MicroPython 1.29+: network.WLAN.IF_STA; older firmware: network.STA_IF
+    sta = network.WLAN(network.WLAN.IF_STA if hasattr(network.WLAN, "IF_STA") else network.STA_IF)
     sta.active(True)
     sta.config(channel=config.CHANNEL)
     sta.disconnect()

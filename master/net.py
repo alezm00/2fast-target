@@ -7,6 +7,37 @@ import network
 PREFIX = "2FT"
 
 
+def wlan(kind):
+    """WLAN interface "STA" or "AP" on MicroPython 1.29+ (network.WLAN.IF_*)
+    and on older firmware (network.STA_IF / AP_IF)."""
+    const = getattr(network.WLAN, "IF_" + kind, None)
+    if const is None:
+        const = getattr(network, kind + "_IF")
+    return network.WLAN(const)
+
+
+def config_ap(ap, ssid, password, channel):
+    """Configure the access point with the 1.29 API (key=, security=), falling
+    back to the older one (password=, authmode=)."""
+    W = network.WLAN
+    if hasattr(W, "SEC_OPEN"):
+        kw = {"ssid": ssid, "channel": channel}
+        if password:
+            kw["key"] = password
+            kw["security"] = W.SEC_WPA2
+        else:
+            kw["security"] = W.SEC_OPEN
+        ap.config(**kw)
+        return
+    kw = {"ssid": ssid, "channel": channel}
+    if password:
+        kw["password"] = password
+        kw["authmode"] = getattr(network, "AUTH_WPA_WPA2_PSK", None) or getattr(network, "AUTH_WPA2_PSK", 3)
+    else:
+        kw["authmode"] = getattr(network, "AUTH_OPEN", 0)
+    ap.config(**kw)
+
+
 def _mac(wlan):
     try:
         return binascii.hexlify(wlan.config("mac"), ":").decode()
@@ -20,21 +51,11 @@ def start_wifi(s):
     info = {"ap_ssid": s["ap_ssid"], "ap_ip": "", "sta_ip": "", "sta_ssid": s["sta_ssid"],
             "channel": s["ap_channel"], "ap_mac": "", "sta_mac": "", "error": ""}
     try:
-        sta = network.WLAN(network.STA_IF)
+        sta = wlan("STA")
         sta.active(True)
-        ap = network.WLAN(network.AP_IF)
+        ap = wlan("AP")
         ap.active(True)
-        pw = s["ap_password"]
-        kw = {"ssid": s["ap_ssid"], "channel": s["ap_channel"]}
-        if pw:
-            kw["password"] = pw
-            auth = getattr(network, "AUTH_WPA_WPA2_PSK", None) or getattr(network, "AUTH_WPA2_PSK", 3)
-        else:
-            auth = getattr(network, "AUTH_OPEN", 0)
-        try:
-            ap.config(authmode=auth, **kw)
-        except (ValueError, TypeError):
-            ap.config(security=auth, **kw)
+        config_ap(ap, s["ap_ssid"], s["ap_password"], s["ap_channel"])
         try:
             network.hostname("2fast-target")
         except Exception:
