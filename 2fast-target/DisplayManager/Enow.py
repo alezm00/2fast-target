@@ -37,7 +37,7 @@ class EspNowRemoteController:
     async def sendMessage(self, message, retry=5, callback=None):
         for _ in range(retry):
             try:
-                a = await self.E.asend(peer_mac, message, sync=True)
+                a = await self.E.asend(self.peerMac, message, sync=True)
                 if a:
                     print(f"Sent message: {message}", a)
                     #await NeoLogger.blink(2, "green")  # Changed from asyncio.run()
@@ -56,18 +56,25 @@ class EspNowRemoteController:
         print("Starting message receiver...")
         while True:
             try:
-                print("message receiver...",self.E)
                 async for mac, msg in self.E:
-                    print(f"Received from {mac.hex()}: {msg.decode()}", self.E)
+                    try:
+                        text = msg.decode()
+                    except UnicodeError:
+                        print("Ignoring undecodable message from", mac.hex())
+                        continue
+                    print("Received from", mac.hex(), ":", text)
                     if callback:
-                        print("callback",msg,mac)
-                        should_exit = await callback(msg.decode(), mac)
+                        try:
+                            should_exit = await callback(text, mac)
+                        except Exception as err:  # a bad handler must not kill the receiver
+                            print("Message handler error:", repr(err))
+                            continue
                         if should_exit:
-                            print("Exiting message receiver loop.", msg.decode())
+                            print("Exiting message receiver loop.", text)
                             return "Exit received"
             except OSError as err:
                 print("Receive error:", err)
-                await asyncio.sleep(5)
+                await asyncio.sleep(1)
 
 
     def close(self):

@@ -3,68 +3,59 @@ from neopixel import NeoPixel
 import asyncio
 import utime
 
+COLORS = {
+    "red": (255, 0, 0),
+    "green": (0, 255, 0),
+    "white": (255, 255, 255),
+    "purple": (128, 0, 128),
+    "blue": (0, 0, 255),
+    "yellow": (255, 255, 0),
+}
+
 
 class NeoLogger:
-    def __init__(self,RGB_pin=48):
+    def __init__(self, RGB_pin=48):
         self.pin = Pin(RGB_pin, Pin.OUT)
         self.neo = NeoPixel(self.pin, 1)
-        self.neo[0] = (0, 0, 0)
-        self.neo.write()
+        self.off()
 
     def log(self, r, g, b):
         self.neo[0] = (r, g, b)
         self.neo.write()
 
     def red(self):
-        self.log(255,0,0)
+        self.log(*COLORS["red"])
 
     def green(self):
-        self.log(0,255,0)
+        self.log(*COLORS["green"])
 
     def white(self):
-        self.log(255,255,255)
+        self.log(*COLORS["white"])
 
     def purple(self):
-        self.log(128,0,128)
+        self.log(*COLORS["purple"])
 
     def blue(self):
-        self.log(0,0,255)
+        self.log(*COLORS["blue"])
 
     def yellow(self):
-        self.log(255,255,0)
+        self.log(*COLORS["yellow"])
 
     def off(self):
-        self.log(0,0,0)
+        self.log(0, 0, 0)
 
-    async def blink(self, times, color="red",speed=0.5):
-        print("LOG: Blinking", times, "times in", color)
+    async def blink(self, times, color="red", speed=0.5):
+        rgb = COLORS.get(color, COLORS["red"])
         for _ in range(times):
-            if color=="red":
-                self.red()
-            elif color=="green":
-                self.green()
-            elif color=="white":
-                self.white()
-            elif color=="purple":
-                self.purple()
-            elif color=="blue":
-                self.blue()
-            elif color=="yellow":
-                self.yellow()
+            self.log(*rgb)
             await asyncio.sleep(speed)
             self.off()
             await asyncio.sleep(speed)
 
-    def syncBlink(self, times, color="red",speed=500):
-        print("LOG: Blinking", times, "times in", color)
+    def syncBlink(self, times, color="red", speed=500):
+        rgb = COLORS.get(color, COLORS["red"])
         for _ in range(times):
-            if color=="red":
-                self.red()
-            elif color=="green":
-                self.green()
-            elif color=="white":
-                self.white()
+            self.log(*rgb)
             utime.sleep_ms(speed)
             self.off()
             utime.sleep_ms(speed)
-

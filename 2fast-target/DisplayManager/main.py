@@ -1,3 +1,4 @@
+import machine
 from machine import Pin, SoftI2C
 from machine_i2c_lcd import I2cLcd
 import utime
@@ -52,7 +53,6 @@ def on_connection_established():
 while not connection_established:
     asyncio.run(RemoteControler.sendMessage(INIT_MESSAGE,retry=1,callback=on_connection_established))
     utime.sleep_ms(1000)  # Wait before retrying
-    pass
 
 utime.sleep_ms(1000)
 
@@ -64,36 +64,43 @@ def waitingText():
 waitingText()
 gamestatus = "WAITING"
 
-debounceDelay = 5000  # milliseconds
-buttonlastPress = utime.ticks_ms()-debounceDelay
+# Button IRQs only record the request: sending (asyncio, radio) must never
+# run inside an interrupt handler. A background task does the actual send.
+pending_action = None
+buttonlastPress = utime.ticks_ms() - BUTTON_DEBOUNCE_MS
+resetlastPress = utime.ticks_ms() - RESET_DEBOUNCE_MS
+
+
 def button_handler(pin):
-    global buttonlastPress
-    global gamestatus
-    if utime.ticks_diff(utime.ticks_ms(), buttonlastPress) < debounceDelay:
+    global buttonlastPress, pending_action
+    now = utime.ticks_ms()
+    if utime.ticks_diff(now, buttonlastPress) < BUTTON_DEBOUNCE_MS:
         return
-    buttonlastPress = utime.ticks_ms()
-    print("Button pressed, sendingmessage")
+    buttonlastPress = now
+    # key held while pressing the button -> demo mode
+    pending_action = MODE_MESSAGE if not key_pin.value() else START_MESSAGE
 
-    #if gamestatus == STOP_MESSAGE or gamestatus == "WAITING":
-    if not key_pin.value():
-        print("Button pressed, key 1 ,sending DEMO message")
-        asyncio.run(RemoteControler.sendMessage(MODE_MESSAGE))
-    else:
-        print("Button pressed, sending START message")
-        asyncio.run(RemoteControler.sendMessage(START_MESSAGE))
-    #if gamestatus == START_MESSAGE or gamestatus == MODE_MESSAGE:
-        #asyncio.run(RemoteControler.sendMessage(STOP_MESSAGE))
 
-resetDebounce = 5000
-deboundelastpress = utime.ticks_ms()-resetDebounce
 def reset_button(pin):
-    global deboundelastpress
-    if utime.ticks_diff(utime.ticks_ms(), deboundelastpress) < resetDebounce:
+    global resetlastPress, pending_action
+    now = utime.ticks_ms()
+    if utime.ticks_diff(now, resetlastPress) < RESET_DEBOUNCE_MS:
         return
-    deboundelastpress = utime.ticks_ms()
-    print("Reset button pressed, sending RESET message")
-    asyncio.run(RemoteControler.sendMessage(STOP_MESSAGE))
+    resetlastPress = now
+    pending_action = STOP_MESSAGE  # reset always wins
 
+
+async def buttonWorker():
+    global pending_action
+    while True:
+        action = pending_action
+        if action is not None:
+            pending_action = None
+            print("Button action:", action)
+            ok = await RemoteControler.sendMessage(action)
+            if not ok:
+                print("Master did not acknowledge", action)
+        await asyncio.sleep_ms(20)
 
 
 def timeString(time_ms: float = 0.0) -> str:
@@ -137,7 +144,11 @@ async def message_callback(msg:str, mac):
         gamestatus = "WAITING"
         print("ENDGAME message received.", msg)
 
-        time_ms = float(msg.split(":")[1].strip())
+        try:
+            time_ms = float(msg.split(":")[1].strip())
+        except (IndexError, ValueError):
+            print("Malformed ENDGAME message:", msg)
+            return
         time_str = timeString(time_ms)
 
         lcd.clear()
@@ -145,12 +156,27 @@ async def message_callback(msg:str, mac):
         led_blink(led_pin, times=15, delay_ms=50)
 
 
+async def main():
+    asyncio.create_task(buttonWorker())
+    await RemoteControler.messageReceiver(callback=message_callback)
+
+
 try:
     buttonPin.irq(trigger=Pin.IRQ_FALLING, handler=button_handler)
     resetPin.irq(trigger=Pin.IRQ_FALLING, handler=reset_button)
-    asyncio.run(RemoteControler.messageReceiver(callback=message_callback))
+    asyncio.run(main())
 except KeyboardInterrupt:
     print("Keyboard interrupt")
     lcd.backlight_off()
     lcd.display_off()
     RemoteControler.close()
+except Exception as err:
+    # Unrecoverable error: reboot instead of hanging with a frozen screen
+    print("Fatal error:", repr(err))
+    try:
+        lcd.clear()
+        lcd.putstr("Errore, riavvio...")
+    except Exception:
+        pass
+    utime.sleep_ms(2000)
+    machine.reset()
