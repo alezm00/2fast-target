@@ -76,6 +76,17 @@ class KeypadTests(unittest.TestCase):
         ev = run(kp, 60)
         self.assertEqual(sorted(k for k, _ in ev), [0, 1])
 
+    def test_key_is_not_reported_twice_when_it_turns_ambiguous_and_clear(self):
+        kp, _ = make_keypad()
+        press(0, 1)
+        ev = run(kp, 40)
+        press(5)                 # 3 corners of a rectangle -> 0, 1, 5 (and ghost 6) ambiguous
+        ev += run(kp, 40)
+        release(0)               # ambiguity ends while 1 and 5 are still held
+        ev += run(kp, 40)
+        # each key exactly once; 5 is confirmed late, as soon as the ambiguity is gone
+        self.assertEqual(sorted(k for k, _ in ev), [0, 1, 5])
+
     def test_ghost_filter_can_be_disabled(self):
         kp, _ = make_keypad(ghost_filter=False)
         press(0, 1, 5)

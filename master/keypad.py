@@ -51,6 +51,7 @@ class Keypad:
         self.stuck = 0
         self.ambiguous = 0
         self.active = 0        # down, not stuck, not ambiguous
+        self.reported = 0      # keys already reported during the current press
         self.fault = False
         self.scans = 0
         self.events = []
@@ -88,7 +89,7 @@ class Keypad:
         del events[:]
         if not raw and not self.live:
             # idle fast path: nothing pressed, nothing settling
-            self.down = self.stuck = self.ambiguous = self.active = 0
+            self.down = self.stuck = self.ambiguous = self.active = self.reported = 0
             self.fault = False
             return events
 
@@ -141,7 +142,10 @@ class Keypad:
         self.fault = popcount(down) > NOISE_LIMIT
         active = 0 if self.fault else usable & ~ambiguous
 
-        new = active & ~self.active
+        # one event per physical press: a key that turns ambiguous and clear
+        # again while still held must not be reported a second time
+        new = active & ~self.reported
+        self.reported = (self.reported | active) & down
         if new:
             for k in range(self.n):
                 if new & (1 << k):
