@@ -203,10 +203,10 @@ class WebServer:
         return 200, {"ok": True, "reboot": True}
 
     def api_start(self, d):
-        params = d.get("params")
-        if params is not None and not isinstance(params, dict):
-            return 400, {"error": "params non valido"}
-        ok, msg = self.app.cmd_start(d.get("mode"), params, "web")
+        mode = d.get("mode")
+        if mode is not None and mode not in games.MODE_IDS:
+            return 400, {"error": "modalità sconosciuta"}
+        ok, msg = self.app.cmd_start(mode, "web")
         return (200, {"ok": True}) if ok else (409, {"error": msg})
 
     def api_stop(self, d):

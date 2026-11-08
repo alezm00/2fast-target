@@ -20,10 +20,9 @@ LED_ACTIVE_LOW = True
 # On-board RGB status LED (None to disable)
 STATUS_PIN = 48
 
-# Physical buttons wired to the master (active low, internal pull-up).
-# None disables the button.
-BTN_START_PIN = 4   # short press: start / stop toggle
-BTN_STOP_PIN = 5    # short press: stop
+# Physical START button wired to the master (active low, internal pull-up
+# to GND). Starts the game selected in the web interface. None disables it.
+BTN_START_PIN = 4
 
 # Hardware watchdog: reboots the board if the main loop hangs
 ENABLE_WDT = True

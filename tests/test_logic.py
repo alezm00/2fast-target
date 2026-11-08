@@ -170,7 +170,7 @@ class SessionTests(unittest.TestCase):
 
     def test_countdown_then_go(self):
         self.s.update({"countdown_step_ms": 100, "countdown_rand_ms": 0}, persist=False)
-        ok, _ = self.sess.start("sequence", None, CLOCK.now())
+        ok, _ = self.sess.start("sequence", CLOCK.now())
         self.assertTrue(ok)
         self.assertEqual(self.sess.phase, "countdown")
         self.assertEqual(self.sess.out, 0b11111)          # first row lit
@@ -182,19 +182,19 @@ class SessionTests(unittest.TestCase):
 
     def test_no_countdown(self):
         self.s.update({"countdown_enabled": False}, persist=False)
-        self.sess.start("sequence", None, CLOCK.now())
+        self.sess.start("sequence", CLOCK.now())
         self.assertEqual(self.sess.phase, "running")
 
     def test_cannot_start_twice_and_stop_in_countdown(self):
-        self.sess.start("sequence", None, CLOCK.now())
-        ok, msg = self.sess.start("reflex", None, CLOCK.now())
+        self.sess.start("sequence", CLOCK.now())
+        ok, msg = self.sess.start("reflex", CLOCK.now())
         self.assertFalse(ok)
         self.assertTrue(self.sess.stop(CLOCK.now()))
         self.assertEqual((self.sess.phase, self.sess.out), ("idle", 0))
 
     def test_full_game_records_result_and_best(self):
         self.s.update({"countdown_enabled": False, "finish_blink": False}, persist=False)
-        self.sess.start("sequence", None, CLOCK.now())
+        self.sess.start("sequence", CLOCK.now())
         while self.sess.phase == "running":
             CLOCK.advance(150)
             self.sess.hit(self.sess.out.bit_length() - 1, CLOCK.now())
@@ -203,7 +203,7 @@ class SessionTests(unittest.TestCase):
         self.assertTrue(self.sess.record)
         self.assertEqual(self.b.best["sequence"]["v"], 3750)
         # a slower game is not a record
-        self.sess.start("sequence", None, CLOCK.now())
+        self.sess.start("sequence", CLOCK.now())
         while self.sess.phase == "running":
             CLOCK.advance(300)
             self.sess.hit(self.sess.out.bit_length() - 1, CLOCK.now())
@@ -212,7 +212,7 @@ class SessionTests(unittest.TestCase):
 
     def test_abort_keeps_time_but_is_not_recorded(self):
         self.s.update({"countdown_enabled": False}, persist=False)
-        self.sess.start("sequence", None, CLOCK.now())
+        self.sess.start("sequence", CLOCK.now())
         CLOCK.advance(1234)
         self.sess.stop(CLOCK.now())
         self.assertTrue(self.sess.result["aborted"])
@@ -222,7 +222,7 @@ class SessionTests(unittest.TestCase):
     def test_disabled_targets_are_skipped(self):
         en = [i % 2 == 0 for i in range(25)]
         self.s.update({"enabled": en, "countdown_enabled": False}, persist=False)
-        self.sess.start("sequence", None, CLOCK.now())
+        self.sess.start("sequence", CLOCK.now())
         seen = set()
         while self.sess.phase == "running":
             t = self.sess.out.bit_length() - 1
@@ -231,15 +231,14 @@ class SessionTests(unittest.TestCase):
             self.sess.hit(t, CLOCK.now())
         self.assertEqual(seen, set(i for i in range(25) if i % 2 == 0))
 
-    def test_overrides_only_apply_to_that_game(self):
-        self.s.update({"countdown_enabled": False}, persist=False)
-        self.sess.start("timed", {"timed_duration_s": 7, "ap_ssid": "evil"}, CLOCK.now())
-        self.assertEqual(self.sess.game.duration, 7000)
-        self.assertEqual(self.s["timed_duration_s"], 30)
-        self.assertEqual(self.s["ap_ssid"], "2FastTarget")
+    def test_start_without_mode_uses_the_selected_game_and_saved_params(self):
+        self.s.update({"default_mode": "timed", "timed_duration_s": 7, "countdown_enabled": False}, persist=False)
+        ok, _ = self.sess.start(None, CLOCK.now())
+        self.assertTrue(ok)
+        self.assertEqual((self.sess.mode, self.sess.game.id, self.sess.game.duration), ("timed", "timed", 7000))
 
-    def test_bad_override_rejected(self):
-        ok, msg = self.sess.start("timed", {"timed_duration_s": -5}, CLOCK.now())
+    def test_unknown_mode_rejected(self):
+        ok, msg = self.sess.start("zzz", CLOCK.now())
         self.assertFalse(ok)
 
 

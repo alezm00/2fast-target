@@ -1,5 +1,5 @@
 """Application core: ties keypad, LEDs, game session, test/calibration mode
-and the command sources (web, local buttons, radio remote) together."""
+and the command sources (web page, physical START button) together."""
 import asyncio
 import gc
 from time import ticks_ms, ticks_diff
@@ -48,11 +48,12 @@ class App:
     def note(self, source, cmd):
         self.last_cmd = (source, cmd, ticks_ms())
 
-    def cmd_start(self, mode=None, overrides=None, source="web"):
+    def cmd_start(self, mode=None, source="web"):
+        """Start the selected game (or `mode`) with the saved settings."""
         if self.mode != PLAY:
             return False, "Esci dalla modalità test per giocare"
         self.note(source, "start")
-        return self.session.start(mode or self.session.mode, overrides, ticks_ms())
+        return self.session.start(mode, ticks_ms())
 
     def cmd_stop(self, source="web"):
         self.note(source, "stop")
@@ -60,11 +61,6 @@ class App:
             return False, "Modalità test attiva"
         ok = self.session.stop(ticks_ms())
         return ok, "ok" if ok else "Nessuna partita in corso"
-
-    def cmd_toggle(self, source="button"):
-        if self.session.active():
-            return self.cmd_stop(source)
-        return self.cmd_start(None, None, source)
 
     def set_app_mode(self, mode):
         if mode not in (PLAY, TEST):
@@ -254,6 +250,7 @@ class App:
         now = ticks_ms()
         st = self.session.state(now)
         st["app"] = self.mode
+        st["armed"] = self.settings["default_mode"]     # game started by the START button
         if self.last_cmd:
             st["cmd"] = [self.last_cmd[0], self.last_cmd[1], ticks_diff(now, self.last_cmd[2])]
         if self.mode != PLAY:

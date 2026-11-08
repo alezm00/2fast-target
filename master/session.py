@@ -29,22 +29,9 @@ class Session:
         self.blink_t0 = 0
 
     # ---- control ----------------------------------------------------------
-    def params_for(self, mode, overrides):
-        """Settings merged with per-game overrides (only keys of that mode)."""
-        p = dict(self.settings.v)
-        if overrides:
-            allowed = None
-            for m in games.MODES:
-                if m[0] == mode:
-                    allowed = m[3]
-            clean, errors = self.settings.validate(
-                {k: v for k, v in overrides.items() if allowed and k in allowed})
-            if errors:
-                return None, errors
-            p.update(clean)
-        return p, {}
-
-    def start(self, mode, overrides, now):
+    def start(self, mode, now):
+        """Start the game `mode` (default: the selected one) with the saved settings."""
+        mode = mode or self.settings["default_mode"]
         if self.phase in (COUNTDOWN, RUNNING):
             return False, "Partita già in corso"
         if mode not in games.MODE_IDS:
@@ -52,9 +39,7 @@ class Session:
         targets = self.settings.enabled_targets()
         if not targets:
             return False, "Nessun bersaglio attivo"
-        params, errors = self.params_for(mode, overrides)
-        if errors:
-            return False, "Parametri non validi: " + ", ".join(errors)
+        params = dict(self.settings.v)
         if mode == "multi" and len(targets) < 2:
             return False, "Servono almeno 2 bersagli attivi"
         self.mode = mode

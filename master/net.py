@@ -1,10 +1,8 @@
-"""WiFi (access point + optional station) and the ESP-NOW radio remote."""
+"""WiFi: access point (always on) + optional station connection."""
 import asyncio
 import binascii
 
 import network
-
-PREFIX = "2FT"
 
 
 def wlan(kind):
@@ -89,58 +87,3 @@ async def sta_supervisor(info, s):
         except Exception as err:
             print("STA error:", err)
         await asyncio.sleep(10)
-
-
-class RemoteListener:
-    """Receives START/STOP/TOGGLE commands from the radio remote (ESP-NOW,
-    broadcast frames "2FT|code|id|command"). Frames are repeated by the sender,
-    so duplicates (same id) are dropped here."""
-
-    def __init__(self, app, settings):
-        self.app = app
-        self.settings = settings
-        self.seen = []
-
-    def handle(self, text):
-        parts = text.split("|")
-        if len(parts) != 4 or parts[0] != PREFIX:
-            return None
-        if parts[1] != self.settings["remote_secret"]:
-            return None
-        if parts[2] in self.seen:
-            return None
-        self.seen.append(parts[2])
-        del self.seen[:-8]
-        cmd = parts[3]
-        app = self.app
-        if cmd == "STOP":
-            app.cmd_stop("remote")
-        elif cmd == "TOGGLE":
-            app.cmd_toggle("remote")
-        elif cmd.startswith("START"):
-            mode = cmd[6:] if cmd.startswith("START:") else None
-            app.cmd_start(mode or None, None, "remote")
-        else:
-            return None
-        return cmd
-
-    async def run(self):
-        import aioespnow
-        e = aioespnow.AIOESPNow()
-        e.active(True)
-        print("ESP-NOW remote receiver ready")
-        try:
-            while True:
-                try:
-                    async for mac, msg in e:
-                        try:
-                            cmd = self.handle(msg.decode())
-                            if cmd:
-                                print("remote command:", cmd)
-                        except Exception as err:
-                            print("remote message error:", repr(err))
-                except OSError as err:
-                    print("ESP-NOW receive error:", err)
-                    await asyncio.sleep(1)
-        finally:
-            e.active(False)

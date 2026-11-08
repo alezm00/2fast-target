@@ -149,12 +149,11 @@ code{background:var(--cell);padding:1px 6px;border-radius:6px}
         <div class="legend" id="playLegend"></div>
       </div>
       <div class="card">
-        <h2>Modalità di gioco</h2>
+        <h2>Partita selezionata</h2>
         <div class="modes" id="modes"></div>
-        <details style="margin-top:12px"><summary class="sub" style="cursor:pointer">Parametri di questa partita</summary>
-          <div id="modeParams"></div>
-          <div class="sub" style="margin-top:6px">Valgono solo per le prossime partite avviate da qui. I valori predefiniti si cambiano in Impostazioni.</div>
-        </details>
+        <div class="sub" style="margin:12px 0 4px">Parametri della partita selezionata</div>
+        <div id="modeParams"></div>
+        <div class="sub" style="margin-top:8px">Modalità e parametri si salvano subito sul dispositivo: la partita selezionata si avvia da <b>AVVIA</b> qui sopra oppure dal <b>tasto START</b> sul dispositivo.</div>
       </div>
     </div>
   </div>
@@ -250,7 +249,7 @@ code{background:var(--cell);padding:1px 6px;border-radius:6px}
 "use strict";
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const N=25;
-let S={}, info=null, cfg=null, lastRid=-1, result=null, tab='play', tRx=0, sel=null, inflight=false, formDirty=false;
+let S={}, info=null, cfg=null, lastRid=-1, result=null, tab='play', tRx=0, builtFor=null, inflight=false;
 
 async function api(path, body){
   const o = body===undefined ? {} : {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)};
@@ -322,7 +321,7 @@ function render(){
   $$('#cd i').forEach((e,i)=>e.classList.toggle('on', i<(S.cd||0)));
   const pr=$('#prog'); pr.classList.toggle('hide', !(ph==='running' && S.total));
   if(S.total){ pr.max=S.total; pr.value=S.prog||0; }
-  if(S.cmd && S.cmd[2]<8000){ const src={web:'dal sito',remote:'dal telecomando',button:'dal pulsante'}[S.cmd[0]]||S.cmd[0]; $('#cmdInfo').textContent=(S.cmd[1]==='start'?'Avvio ':'Stop ')+src; } else $('#cmdInfo').innerHTML='&nbsp;';
+  if(S.cmd && S.cmd[2]<8000){ const src={web:'dal sito',button:'dal tasto START'}[S.cmd[0]]||S.cmd[0]; $('#cmdInfo').textContent=(S.cmd[1]==='start'?'Avvio ':'Stop ')+src; } else $('#cmdInfo').innerHTML='&nbsp;';
   $('#resCard').classList.toggle('hide', !result || ph==='running' || ph==='countdown');
   // modes
   if(info) renderModes();
@@ -345,12 +344,18 @@ function render(){
 function renderModes(){
   const box=$('#modes'); if(!box.dataset.built){
     box.dataset.built=1;
-    info.modes.forEach(m=>{ const b=document.createElement('button'); b.className='mode'; b.dataset.id=m.id; b.innerHTML='<b>'+m.name+'</b><small>'+m.desc+'</small>'; b.onclick=()=>{ sel=m.id; try{localStorage.mode=sel;}catch(e){} renderModes(); buildParams(); }; box.appendChild(b); });
+    info.modes.forEach(m=>{ const b=document.createElement('button'); b.className='mode'; b.dataset.id=m.id; b.innerHTML='<b>'+m.name+'</b><small>'+m.desc+'</small>'; b.onclick=()=>selectMode(m.id); box.appendChild(b); });
   }
-  if(!sel) sel = (()=>{ try{return localStorage.mode;}catch(e){} })() || S.mode || 'sequence';
-  if(!info.modes.some(m=>m.id===sel)) sel='sequence';
-  $$('#modes .mode').forEach(b=>b.classList.toggle('sel', b.dataset.id===sel));
-  if(!$('#modeParams').dataset.mode) buildParams();
+  const armed=S.armed||'sequence';
+  $$('#modes .mode').forEach(b=>b.classList.toggle('sel', b.dataset.id===armed));
+  if(builtFor!==armed) buildParams();
+}
+/* The selected game and its parameters live on the device: the START button starts them too. */
+async function selectMode(id){
+  S.armed=id; renderModes();
+  const r=await api('/api/config',{default_mode:id});
+  if(!r.ok) toast('Operazione non riuscita');
+  await loadCfg(true); poll(true);
 }
 function field(spec, val, id){
   const [key,kind,def,a,b,grp,label]=spec; let inp;
@@ -366,16 +371,22 @@ function readField(spec, id){
 }
 async function buildParams(){
   if(!info) return; if(!cfg) await loadCfg(true);
-  const m=info.modes.find(x=>x.id===sel); if(!m||!cfg) return;
-  $('#modeParams').dataset.mode=sel;
+  const id=S.armed||'sequence';
+  const m=info.modes.find(x=>x.id===id); if(!m||!cfg) return;
+  builtFor=id;
   $('#modeParams').innerHTML = m.params.map(k=>{ const sp=info.schema.find(s=>s[0]===k); return field(sp, cfg.values[k], 'p_'+k); }).join('');
 }
-$('#go').onclick=async()=>{
+$('#modeParams').addEventListener('change', async e=>{
+  const el=e.target; if(!el.id||el.id.indexOf('p_')!==0) return;
+  const key=el.id.slice(2), sp=info.schema.find(x=>x[0]===key); if(!sp) return;
+  const val=readField(sp,el.id);
+  const r=await api('/api/config',{[key]:val});
+  if(r.ok){ cfg.values[key]=val; toast('Salvato'); }
+  else { toast((r.j.errors&&r.j.errors[key])||'Valore non valido'); await loadCfg(true); builtFor=null; buildParams(); }
+});
+$('#go').onclick=()=>{
   const active = S.phase==='running'||S.phase==='countdown';
-  if(active) return act('/api/stop');
-  const m=info.modes.find(x=>x.id===sel); const params={};
-  m.params.forEach(k=>{ const sp=info.schema.find(s=>s[0]===k); const el=document.getElementById('p_'+k); if(el) params[k]=readField(sp,'p_'+k); });
-  act('/api/start',{mode:sel,params});
+  act(active?'/api/stop':'/api/start');
 };
 $('#exitTest').onclick=$('#leaveTest').onclick=()=>act('/api/appmode',{mode:'play'});
 $('#enterTest').onclick=()=>act('/api/appmode',{mode:'test'});
@@ -444,7 +455,7 @@ async function loadResults(){
 $('#clrRes').onclick=async()=>{ if(confirm('Cancellare lo storico e i record?')){ await act('/api/results/clear',{},'Storico cancellato'); loadResults(); } };
 
 /* ---------- settings ---------- */
-const GROUPS=[['game','Partita'],['sequence','Sequenza'],['reflex','Riflessi'],['timed','A tempo'],['multi','Multi-bersaglio'],['demo','Demo'],['input','Lettura tastiera / taratura'],['wifi','WiFi'],['remote','Telecomando']];
+const GROUPS=[['game','Partita'],['sequence','Sequenza'],['reflex','Riflessi'],['timed','A tempo'],['multi','Multi-bersaglio'],['demo','Demo'],['input','Lettura tastiera / taratura'],['wifi','WiFi']];
 async function loadInfo(){ const r=await api('/api/info'); if(r.ok){ info=r.j; renderInfo(); } }
 async function loadCfg(quiet){ if(!info) await loadInfo(); const r=await api('/api/config'); if(r.ok){ cfg=r.j; if(!quiet) buildForm(); } }
 function renderInfo(){
@@ -462,7 +473,7 @@ $('#saveCfg').onclick=async()=>{
   if(!Object.keys(ch).length){ toast('Nessuna modifica'); return; }
   const r=await api('/api/config',ch);
   if(!r.ok){ const er=r.j.errors||{}; Object.keys(er).forEach(k=>{ const f=document.querySelector('#cfgForm .field[data-k="'+k+'"]'); if(f){ f.classList.add('err'); f.querySelector('.e').textContent=er[k]; } }); toast('Controlla i campi evidenziati'); return; }
-  toast('Salvato'); await loadCfg(); $('#modeParams').dataset.mode=''; buildParams();
+  toast('Salvato'); await loadCfg(); builtFor=null; buildParams();
   $('#rebootBanner').classList.toggle('hide', !r.j.reboot);
 };
 async function doReboot(){ await api('/api/reboot',{}); toast('Riavvio in corso…'); }
@@ -470,7 +481,7 @@ $('#reboot').onclick=()=>{ if(confirm('Riavviare il dispositivo?')) doReboot(); 
 $('#rebootNow').onclick=doReboot;
 $('#factory').onclick=async()=>{ if(!confirm('Ripristinare TUTTE le impostazioni (incluso WiFi e associazione bersagli)?')) return; const r=await api('/api/config/reset',{}); if(r.ok){ toast('Ripristinato: riavvia il dispositivo'); $('#rebootBanner').classList.remove('hide'); await loadCfg(); } };
 
-(async()=>{ await loadInfo(); await loadCfg(true); renderModes(); buildParams(); })();
+(async()=>{ await loadInfo(); await loadCfg(true); poll(true); })();
 </script>
 </body>
 </html>

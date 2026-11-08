@@ -15,7 +15,7 @@ MODE_IDS = ("sequence", "reflex", "timed", "multi", "demo")
 #   int:    a=min, b=max     bool: -      str: a=min length, b=max length
 #   choice: a=choices
 SCHEMA = (
-    ("default_mode", "choice", "sequence", MODE_IDS, None, "game", "Modalità predefinita"),
+    ("default_mode", "choice", "sequence", MODE_IDS, None, "game", "Partita selezionata (la avvia anche il tasto START)"),
     ("countdown_enabled", "bool", True, None, None, "game", "Semaforo di partenza"),
     ("countdown_step_ms", "int", 800, 100, 3000, "game", "Semaforo: durata di ogni riga (ms)"),
     ("countdown_rand_ms", "int", 1000, 0, 5000, "game", "Semaforo: attesa casuale massima (ms)"),
@@ -46,11 +46,10 @@ SCHEMA = (
 
     ("ap_ssid", "str", "2FastTarget", 1, 32, "wifi", "Nome rete WiFi (access point)"),
     ("ap_password", "str", "2fasttarget", 0, 63, "wifi", "Password WiFi (min. 8 caratteri, vuota = rete aperta)"),
-    ("ap_channel", "int", 1, 1, 13, "wifi", "Canale WiFi / ESP-NOW"),
+    ("ap_channel", "int", 1, 1, 13, "wifi", "Canale WiFi"),
     ("sta_ssid", "str", "", 0, 32, "wifi", "Collegati anche a questa rete (opzionale)"),
     ("sta_password", "str", "", 0, 63, "wifi", "Password della rete"),
 
-    ("remote_secret", "str", "2fast", 1, 16, "remote", "Codice di abbinamento telecomando"),
 )
 
 KEYS = tuple(s[0] for s in SCHEMA)

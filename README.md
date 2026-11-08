@@ -2,11 +2,11 @@
 
 Matrice 5×5 di bersagli luminosi a pressione, controllata da un ESP32‑S3 (MicroPython).
 Il master crea una **rete WiFi propria** e serve una **pagina web** (telefono o PC) per giocare,
-vedere i tempi, configurare e tarare i bersagli. La partita si può avviare dalla pagina, da un
-pulsante sul master o da un **telecomando radio** (un piccolo ESP32 con un pulsante).
+vedere i tempi, configurare e tarare i bersagli. La partita si sceglie e si configura dalla pagina,
+poi si avvia dalla pagina oppure dal **tasto START** collegato al master.
 
 ```
- telefono / PC ──WiFi──► master ESP32‑S3 ◄──ESP‑NOW── telecomando ESP32 (pulsante)
+ telefono / PC ──WiFi──► master ESP32‑S3 ◄── tasto START
                           │  matrice tasti 5×5 (lettura)
                           └─ matrice LED 5×5 (uscita)
 ```
@@ -15,9 +15,8 @@ pulsante sul master o da un **telecomando radio** (un piccolo ESP32 con un pulsa
 
 | Cartella | Contenuto |
 |---|---|
-| `master/` | firmware del master: scansione bersagli, LED, giochi, server web, telecomando |
+| `master/` | firmware del master: scansione bersagli, LED, giochi, server web, tasto START |
 | `master/web/index.html` | interfaccia web (un solo file, nessuna dipendenza da internet) |
-| `remote/` | firmware del telecomando radio (ESP32 qualsiasi) |
 | `tests/` | test su PC (50) e simulatore del master |
 | `firmware/` | MicroPython 1.29.0 per ESP32 e ESP32‑S3 |
 
@@ -34,18 +33,12 @@ mpremote cp config.py settings.py scoreboard.py keypad.py leds.py games.py sessi
 mpremote reset
 ```
 
-```bash
-# telecomando (qualsiasi ESP32)
-cd remote
-mpremote cp config.py main.py :
-```
-
 Collega il telefono alla rete **`2FastTarget`** (password iniziale **`2fasttarget`**, da cambiare in
 Impostazioni → WiFi) e apri **http://192.168.4.1**.
 
 I pin sono in `master/config.py` (invariati rispetto alla versione precedente: tastiera
 colonne 14,13,12,11,10 / righe 18,8,3,46,9; LED colonne 1,2,42,41,40 / righe 39,38,37,36,35;
-LED di stato GPIO48). Pulsanti locali opzionali: start/stop GPIO4, stop GPIO5.
+LED di stato GPIO48). Tasto START: GPIO4 verso GND (pull‑up interno), configurabile in `BTN_START_PIN`.
 
 ## Modalità di gioco
 
@@ -62,17 +55,17 @@ e attesa casuale), disattivabile.
 | **Demo** | sequenza infinita senza punteggio | – |
 
 Record e ultime 15 partite sono salvati in flash (`results.json`) e visibili in *Risultati*.
-Ogni parametro si può cambiare per la singola partita (sotto le modalità) o in modo permanente in *Impostazioni*.
+La partita **selezionata** e i suoi parametri si impostano nella pagina *Gioca* (o in *Impostazioni*) e
+si salvano subito sul dispositivo: AVVIA e tasto START avviano sempre quella.
 
 ## Avvio partita
 
-* dalla pagina (pulsante **AVVIA / STOP**);
-* dal **pulsante sul master** (GPIO4: avvia/ferma, GPIO5: ferma);
-* dal **telecomando radio**: pulsante start (avvia/ferma) e opzionale stop. Il telecomando trasmette
-  frame ESP‑NOW broadcast `2FT|codice|id|comando`, ripetuti 3 volte; il master scarta i duplicati.
-  Non serve conoscere il MAC: bastano **stesso canale** (`CHANNEL` in `remote/config.py` = canale WiFi
-  del master) e **stesso codice** (`SECRET` = "Codice di abbinamento"). Il codice non è una cifratura:
-  serve solo a evitare comandi involontari da altri telecomandi vicini.
+Si sceglie la partita e se ne regolano i parametri dalla pagina; poi:
+
+* **AVVIA** nella pagina (diventa **STOP** durante la partita);
+* oppure il **tasto START** sul master (GPIO4): avvia la partita selezionata con gli stessi parametri.
+  Il tasto non ferma mai una partita in corso (si ferma dalla pagina), così una pressione accidentale
+  durante il gioco è innocua; è ignorato in modalità test.
 
 La pagina indica da dove è partito l'ultimo comando.
 
@@ -108,11 +101,10 @@ I LED sono pilotati in multiplexing solo quando serve (più bersagli accesi), al
 Tutto è modificabile da *Impostazioni* e salvato in `settings.json` (validato, scrittura atomica;
 un file corrotto o un valore non valido ricade sui predefiniti): parametri dei giochi, semaforo,
 antirimbalzo/assestamento/filtro fantasmi/soglia bloccato, WiFi (nome, password, canale, rete
-domestica opzionale) e codice del telecomando. Le modifiche WiFi richiedono il riavvio.
+domestica opzionale). Le modifiche WiFi richiedono il riavvio.
 
 Con una **rete domestica** configurata il master si collega anche a quella (resta sempre disponibile
-il proprio access point). In quel caso il canale radio segue quello del router: imposta lo stesso
-`CHANNEL` nel telecomando.
+il proprio access point).
 
 ## Affidabilità
 
@@ -125,7 +117,7 @@ il proprio access point). In quel caso il canale radio segue quello del router: 
 ## API HTTP (JSON)
 
 `GET /api/state` · `GET /api/result` · `GET /api/info` · `GET|POST /api/config` · `POST /api/config/reset` ·
-`POST /api/start {mode, params}` · `POST /api/stop` · `POST /api/appmode {mode: play|test}` ·
+`POST /api/start {}` (avvia la partita selezionata) · `POST /api/stop` · `POST /api/appmode {mode: play|test}` ·
 `POST /api/test/led {i,on | mask | pattern}` · `POST /api/test/learn {action: start|skip|back|cancel}` ·
 `POST /api/test/reset` · `GET /api/results` · `POST /api/results/clear` · `POST /api/reboot`
 
@@ -134,7 +126,7 @@ La rete è protetta dalla password WiFi, ma l'API non ha un'ulteriore autenticaz
 ## Sviluppo e test su PC
 
 ```bash
-python3 -m unittest discover -s tests     # 50 test: tastiera (fantasmi, rimbalzi, bloccati), LED, giochi, sessioni, impostazioni, API web
+python3 -m unittest discover -s tests     # 51 test: tastiera (fantasmi, rimbalzi, bloccati), LED, giochi, sessioni, impostazioni, API web
 python3 tests/sim.py                      # master simulato: apri http://localhost:8080
 ```
 
@@ -143,16 +135,12 @@ Non sostituiscono la prova sull'hardware: lo sketch non è stato ancora provato 
 
 ## Flash del firmware MicroPython
 
-Le immagini 1.29.0 sono in `firmware/`. Con [`esptool`](https://docs.espressif.com/projects/esptool/):
+L'immagine per il master è `firmware/ESP32-S3` (la cartella `firmware/ESP32` non serve più a questo progetto). Con [`esptool`](https://docs.espressif.com/projects/esptool/):
 
 ```bash
 # ESP32‑S3 (master): indirizzo 0
 esptool.py erase_flash
 esptool.py --baud 460800 write_flash 0 firmware/ESP32-S3/ESP32_GENERIC_S3-20260824-v1.29.0.bin
-
-# ESP32 (telecomando): indirizzo 0x1000
-esptool.py erase_flash
-esptool.py --baud 460800 write_flash 0x1000 firmware/ESP32/ESP32_GENERIC-20260824-v1.29.0.bin
 ```
 
 `erase_flash` cancella anche impostazioni e risultati salvati. Dalla 1.29 l'API di rete usa

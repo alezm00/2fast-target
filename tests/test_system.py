@@ -14,8 +14,8 @@ from scoreboard import Scoreboard
 from keypad import Keypad
 from leds import LedMatrix
 from app import App
-import net
 from webserver import WebServer
+from buttons import StartButton
 
 PORT = 18080
 
@@ -130,29 +130,60 @@ class SystemTest(unittest.IsolatedAsyncioTestCase):
         st = (await http("GET", "/api/state"))[1]
         self.assertEqual((st["hits"], st["err"]), (0, 1))
 
-    async def test_stop_and_physical_button_paths(self):
-        await http("POST", "/api/start", {"mode": "demo"})
-        await asyncio.sleep(0.05)
-        self.assertEqual((await http("GET", "/api/state"))[1]["phase"], "running")
-        self.app.cmd_toggle("button")                       # same entry point as the buttons / radio
+    async def test_selected_game_is_started_by_web_and_by_the_start_button(self):
+        # the game is configured from the web interface and stored on the device
+        code, _ = await http("POST", "/api/config", {"default_mode": "timed", "timed_duration_s": 9})
+        self.assertEqual(code, 200)
         st = (await http("GET", "/api/state"))[1]
-        self.assertEqual(st["phase"], "finished")
-        self.assertEqual(st["cmd"][0], "button")
-        self.app.cmd_toggle("button")
-        self.assertEqual((await http("GET", "/api/state"))[1]["phase"], "running")
-        self.assertEqual((await http("POST", "/api/stop"))[0], 200)
+        self.assertEqual(st["armed"], "timed")
 
-    async def test_remote_listener(self):
-        rl = net.RemoteListener(self.app, self.settings)
-        self.assertIsNone(rl.handle("2FT|wrong|aa|START"))
-        self.assertEqual(rl.handle("2FT|2fast|id1|START:timed"), "START:timed")
-        self.assertIsNone(rl.handle("2FT|2fast|id1|STOP"))      # repeated frame of the same press: dropped
-        self.assertEqual(self.app.session.phase, "running")
-        self.assertEqual(self.app.session.mode, "timed")
-        self.assertEqual(rl.handle("2FT|2fast|id2|STOP"), "STOP")
-        self.assertEqual(self.app.session.phase, "finished")
-        self.assertIsNone(rl.handle("junk"))
-        self.assertIsNone(rl.handle("2FT|2fast|id3|HACK"))
+        button = StartButton(self.app, config.BTN_START_PIN)
+        self.tasks.append(asyncio.create_task(button.run()))
+
+        async def press_button(ms=120):
+            MATRIX.levels[config.BTN_START_PIN] = 0
+            await asyncio.sleep(ms / 1000)
+            MATRIX.levels[config.BTN_START_PIN] = 1
+            await asyncio.sleep(0.08)
+
+        MATRIX.levels[config.BTN_START_PIN] = 1
+        await asyncio.sleep(0.05)
+        await press_button()
+        st = (await http("GET", "/api/state"))[1]
+        self.assertEqual((st["phase"], st["mode"], st["cmd"][0]), ("running", "timed", "button"))
+        self.assertEqual(self.app.session.game.duration, 9000)
+
+        # pressing START during a game does not stop it, nor restart it
+        t0 = self.app.session.game.t0
+        await press_button()
+        st = (await http("GET", "/api/state"))[1]
+        self.assertEqual(st["phase"], "running")
+        self.assertEqual(self.app.session.game.t0, t0)
+
+        # stopping is done from the web page; then the same game starts again from the button or the site
+        self.assertEqual((await http("POST", "/api/stop"))[0], 200)
+        self.assertEqual((await http("GET", "/api/state"))[1]["phase"], "finished")
+        await http("POST", "/api/config", {"default_mode": "demo"})
+        await press_button()
+        st = (await http("GET", "/api/state"))[1]
+        self.assertEqual((st["phase"], st["mode"]), ("running", "demo"))
+        await http("POST", "/api/stop")
+        code, _ = await http("POST", "/api/start", {})          # web start = selected game too
+        self.assertEqual(code, 200)
+        self.assertEqual((await http("GET", "/api/state"))[1]["mode"], "demo")
+        self.assertEqual((await http("POST", "/api/start", {"mode": "zzz"}))[0], 400)
+
+    async def test_start_button_ignored_in_test_mode(self):
+        await http("POST", "/api/appmode", {"mode": "test"})
+        button = StartButton(self.app, config.BTN_START_PIN)
+        self.tasks.append(asyncio.create_task(button.run()))
+        MATRIX.levels[config.BTN_START_PIN] = 1
+        await asyncio.sleep(0.05)
+        MATRIX.levels[config.BTN_START_PIN] = 0
+        await asyncio.sleep(0.12)
+        MATRIX.levels[config.BTN_START_PIN] = 1
+        await asyncio.sleep(0.05)
+        self.assertEqual((await http("GET", "/api/state"))[1]["phase"], "idle")
 
     async def test_config_api(self):
         code, r = await http("POST", "/api/config", {"seq_timeout_ms": 4000})

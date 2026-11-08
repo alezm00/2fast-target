@@ -1,35 +1,34 @@
-"""Local physical buttons (start/stop) with software debounce."""
+"""Physical START button (GPIO in config.BTN_START_PIN) with software debounce.
+
+Starts the game currently selected in the web interface. It never stops a game
+(stopping is done from the web page), so an accidental press while playing is harmless."""
 import asyncio
 from machine import Pin
 
 POLL_MS = 10
-STABLE_N = 4   # 40 ms
+STABLE_N = 4   # 40 ms of stable level
 
 
-class Buttons:
-    def __init__(self, app, start_pin, stop_pin):
+class StartButton:
+    def __init__(self, app, pin):
         self.app = app
-        self.items = []
-        for pin, action in ((start_pin, "toggle"), (stop_pin, "stop")):
-            if pin is not None:
-                self.items.append([Pin(pin, Pin.IN, Pin.PULL_UP), action, 1, 0])
+        self.pin = Pin(pin, Pin.IN, Pin.PULL_UP) if pin is not None else None
+        self.level = 1
+        self.count = 0
 
     async def run(self):
-        if not self.items:
+        if self.pin is None:
             return
         while True:
-            for it in self.items:
-                level = it[0].value()
-                if level == it[2]:
-                    it[3] = 0
-                else:
-                    it[3] += 1
-                    if it[3] >= STABLE_N:
-                        it[2] = level
-                        it[3] = 0
-                        if level == 0:   # pressed
-                            if it[1] == "stop":
-                                self.app.cmd_stop("button")
-                            else:
-                                self.app.cmd_toggle("button")
+            level = self.pin.value()
+            if level == self.level:
+                self.count = 0
+            else:
+                self.count += 1
+                if self.count >= STABLE_N:
+                    self.level = level
+                    self.count = 0
+                    if level == 0:       # pressed
+                        ok, msg = self.app.cmd_start(None, "button")
+                        print("START button:", "ok" if ok else msg)
             await asyncio.sleep_ms(POLL_MS)

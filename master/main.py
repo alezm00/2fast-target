@@ -11,7 +11,7 @@ from scoreboard import Scoreboard
 from keypad import Keypad
 from leds import LedMatrix, StatusLed
 from app import App
-from buttons import Buttons
+from buttons import StartButton
 import net
 from webserver import WebServer
 
@@ -59,14 +59,12 @@ async def main():
 
     info = net.start_wifi(settings)
     web = WebServer(app, info, config.HTTP_PORT, "web", reboot)
-    remote = net.RemoteListener(app, settings)
-    buttons = Buttons(app, config.BTN_START_PIN, config.BTN_STOP_PIN)
+    button = StartButton(app, config.BTN_START_PIN)
 
     tasks = [
         asyncio.create_task(app.run()),
         asyncio.create_task(supervised("web", web.serve)),
-        asyncio.create_task(supervised("remote", remote.run, 5000)),
-        asyncio.create_task(supervised("buttons", buttons.run)),
+        asyncio.create_task(supervised("button", button.run)),
         asyncio.create_task(supervised("sta", lambda: net.sta_supervisor(info, settings), 10000)),
     ]
     if config.ENABLE_WDT:
